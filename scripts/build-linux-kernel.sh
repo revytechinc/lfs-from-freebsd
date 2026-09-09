@@ -39,17 +39,25 @@ if [ ! -f "$KCONFIG" ]; then
 fi
 
 CLANG="${LF_CLANG:-$(lf_clang)}"
-# Host tools (relocs, etc.) often need GCC on FreeBSD; prefer ports gcc for HOSTCC.
+# Host tools: prefer Linux ABI gcc under linuxulator so <asm/types.h> resolves.
 HOSTCC="${LF_HOSTCC:-}"
 if [ -z "$HOSTCC" ]; then
-	for c in gcc14 gcc13 gcc12 gcc; do
-		if command -v "$c" >/dev/null 2>&1; then
-			HOSTCC="$c"
-			break
-		fi
-	done
+	if [ -x /compat/linux/usr/bin/gcc ]; then
+		HOSTCC=/compat/linux/usr/bin/gcc
+	else
+		for c in gcc14 gcc13 gcc12 gcc; do
+			if command -v "$c" >/dev/null 2>&1; then
+				HOSTCC="$c"
+				break
+			fi
+		done
+	fi
 fi
 [ -n "$HOSTCC" ] || HOSTCC="$CLANG"
+HOSTCXX="${LF_HOSTCXX:-}"
+if [ -z "$HOSTCXX" ] && [ -x /compat/linux/usr/bin/g++ ]; then
+	HOSTCXX=/compat/linux/usr/bin/g++
+fi
 JOBS="$(lf_jobs)"
 export MAKE=gmake
 # FreeBSD install(1) is not GNU — kbuild/objtool need ginstall from coreutils.
@@ -89,6 +97,7 @@ HOSTCFLAGS="-I$SRC/tools/include -I$SRC/include/uapi -I$SRC/tools/arch/x86/inclu
 
 gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
 	HOSTCC="$HOSTCC" \
+	${HOSTCXX:+HOSTCXX="$HOSTCXX"} \
 	HOSTCFLAGS="$HOSTCFLAGS" \
 	INSTALL="$INSTALL" \
 	-j"$JOBS" bzImage modules
@@ -96,6 +105,7 @@ gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
 mkdir -p "$LF_OUT/linux/modules"
 gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
 	HOSTCC="$HOSTCC" \
+	${HOSTCXX:+HOSTCXX="$HOSTCXX"} \
 	HOSTCFLAGS="$HOSTCFLAGS" \
 	INSTALL="$INSTALL" \
 	INSTALL_MOD_PATH="$LF_OUT/linux/modules" modules_install

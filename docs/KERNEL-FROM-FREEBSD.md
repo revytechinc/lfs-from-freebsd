@@ -21,17 +21,21 @@ Linux kbuild still compiles **host** utilities (`scripts/`, `tools/objtool`,
 | `install -m` fails | `pkg install coreutils`; `INSTALL=ginstall` |
 | SELinux `mdp` needs `asm/types.h` | `CONFIG_SECURITY_SELINUX=n` in fragment |
 | objtool needs Linux asm headers | `CONFIG_OBJTOOL=n`, frame-pointer unwinder |
-| `relocs.c` ARRAY_SIZE / clang | Prefer ports **gcc** as `HOSTCC` (`LF_HOSTCC=gcc14`) |
+| `relocs.c` ARRAY_SIZE / clang | Prefer ports **gcc** or linuxulator gcc as `HOSTCC` |
+| objtool needs Linux `asm/*.h` | Prefer **`/compat/linux/usr/bin/gcc`** (`linux-rl9-devtools`) so host tools see real Linux headers |
 
-If FreeBSD-native kbuild still fails, use the **hybrid fallback**: build the
-kernel inside the Linux builder guest (`docs/BUILDER-GUEST.md`) while FreeBSD
-keeps orchestration, fetch, and ISO. That remains “from a FreeBSD environment”
-in the project sense.
-
-## Required packages (kernel)
+### Recommended FreeBSD host packages for native-ish kbuild
 
 ```sh
-doas pkg install -y gmake bison flex coreutils gcc14 llvm19
+doas pkg install -y gmake bison flex coreutils gcc14 \
+  linux_base-rl9 linux-rl9-devtools
 ```
 
-Optional: `export LF_HOSTCC=gcc14 LF_CLANG=clang19`
+Then:
+
+```sh
+export LF_HOSTCC=/compat/linux/usr/bin/gcc
+export LF_HOSTCXX=/compat/linux/usr/bin/g++
+export MAKE=gmake INSTALL=ginstall
+gmake kernel
+```
