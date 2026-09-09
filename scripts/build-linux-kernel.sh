@@ -63,11 +63,29 @@ fi
 
 lf_log "HOSTCC=$HOSTCC CLANG=$CLANG INSTALL=$INSTALL"
 
+# Tools (objtool) expect <asm/types.h>; on x86 Linux this comes via the
+# tools include path. Provide a tiny stub that pulls asm-generic.
+mkdir -p "$SRC/tools/include/asm"
+if [ ! -f "$SRC/tools/include/asm/types.h" ]; then
+	cat > "$SRC/tools/include/asm/types.h" <<'EOF'
+/* FreeBSD host stub for Linux tools/ builds — see docs/KERNEL-FROM-FREEBSD.md */
+#ifndef _LF_TOOLS_ASM_TYPES_H
+#define _LF_TOOLS_ASM_TYPES_H
+#include <asm-generic/types.h>
+#endif
+EOF
+fi
+
 # LLVM=1 selects the Linux target from ARCH; do not set CROSS_COMPILE on FreeBSD
 # (it confuses host-tool builds that must use FreeBSD headers).
 "$LF_ROOT/scripts/apply-kernel-config.sh" "$SRC" "$BUILD" "$KCONFIG" "$CLANG"
 
-HOSTCFLAGS="-I$SRC/tools/arch/x86/include -I$SRC/tools/arch/x86/include/uapi -I$SRC/tools/include"
+# syncconfig during bzImage may flip OBJTOOL back on — force the line in .config
+if [ -f "$BUILD/.config" ]; then
+	sed -i.bak -e 's/^CONFIG_OBJTOOL=y$/# CONFIG_OBJTOOL is not set/' "$BUILD/.config"
+fi
+
+HOSTCFLAGS="-I$SRC/tools/include -I$SRC/include/uapi -I$SRC/tools/arch/x86/include -I$SRC/tools/arch/x86/include/uapi"
 
 gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
 	HOSTCC="$HOSTCC" \
