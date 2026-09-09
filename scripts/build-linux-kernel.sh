@@ -40,16 +40,17 @@ fi
 
 CLANG="${LF_CLANG:-$(lf_clang)}"
 JOBS="$(lf_jobs)"
+export MAKE=gmake
 
 "$LF_ROOT/scripts/apply-kernel-config.sh" "$SRC" "$BUILD" "$KCONFIG" "$CLANG"
 
-make -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
+gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
 	HOSTCC="$CLANG" \
 	CROSS_COMPILE="${TARGET_TRIPLE}-" \
 	-j"$JOBS" bzImage modules
 
 mkdir -p "$LF_OUT/linux/modules"
-make -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
+gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
 	HOSTCC="$CLANG" \
 	CROSS_COMPILE="${TARGET_TRIPLE}-" \
 	INSTALL_MOD_PATH="$LF_OUT/linux/modules" modules_install
@@ -62,7 +63,7 @@ cp -f "$BUILD/System.map" "$LF_OUT/linux/System.map" 2>/dev/null || true
 cp -f "$BUILD/.config" "$LF_OUT/linux/config.actual"
 
 # Export headers for OpenZFS builds (builder or local).
-make -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
+gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
 	HOSTCC="$CLANG" \
 	CROSS_COMPILE="${TARGET_TRIPLE}-" \
 	INSTALL_HDR_PATH="$LF_OUT/linux/headers" headers_install

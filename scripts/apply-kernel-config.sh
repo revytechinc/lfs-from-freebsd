@@ -15,8 +15,10 @@ SRC="$1"
 BUILD="$2"
 FRAG="$3"
 CLANG="$4"
+export MAKE=gmake
+export TARGET_TRIPLE="${TARGET_TRIPLE:-x86_64-linux-gnu}"
 
-make -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 HOSTCC="$CLANG" CROSS_COMPILE="${TARGET_TRIPLE:-x86_64-linux-gnu}-" defconfig
+gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 HOSTCC="$CLANG" CROSS_COMPILE="${TARGET_TRIPLE:-x86_64-linux-gnu}-" defconfig
 
 # Prefer in-tree scripts/config when present (shebang is bash — invoke explicitly).
 SC="$SRC/scripts/config"
@@ -48,4 +50,4 @@ while IFS= read -r line || [ -n "$line" ]; do
 	esac
 done < "$FRAG"
 
-make -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 HOSTCC="$CLANG" CROSS_COMPILE="${TARGET_TRIPLE:-x86_64-linux-gnu}-" olddefconfig
+gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 HOSTCC="$CLANG" CROSS_COMPILE="${TARGET_TRIPLE:-x86_64-linux-gnu}-" olddefconfig

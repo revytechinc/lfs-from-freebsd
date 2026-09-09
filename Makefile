@@ -17,6 +17,6 @@ _LF_GMAKE_WRAP= 1
 	test-boot test-boot-bios test-install test-desktop builder chapters clean distclean
 ${_t}:
 	@command -v gmake >/dev/null 2>&1 || { echo "gmake required (pkg install gmake)" >&2; exit 1; }
-	@exec gmake -f GNUmakefile ${_t}
+	@exec gmake -C ${.CURDIR} -f GNUmakefile ${_t} ${.MAKEFLAGS}
 .endfor
 .endif
