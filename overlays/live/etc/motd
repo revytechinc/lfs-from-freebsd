@@ -1,0 +1,3 @@
+lfs-from-freebsd live medium
+Shell + ZFS installer. Desktop (Plasma 6 / SDDM) is installed only onto
+the target disk — see docs/DESKTOP-PLASMA6.md

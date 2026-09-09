@@ -1,0 +1,11 @@
+# Sources for this ISO / image build
+# Generated conceptually by the build; keep this template on the medium.
+#
+# lfs-from-freebsd redistributes GPL-2.0 and CDDL components.
+# Corresponding source tarballs are the vendor/ trees recorded in
+# versions.env / vendor/checksums.lock of the git tag that produced this ISO.
+#
+# Project: https://github.com/revytechinc/lfs-from-freebsd
+# Docs:    docs/GPL-REDISTRIBUTION.md
+#
+# Boot: hybrid BIOS + UEFI (Limine). Desktop (Plasma 6 / SDDM) is installed-only.

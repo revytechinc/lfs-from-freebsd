@@ -1,0 +1,8 @@
+GNU GENERAL PUBLIC LICENSE
+Version 2, June 1991
+
+Full text: https://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
+
+The Linux kernel, BusyBox (GPL-2.0), and many LFS packages are licensed
+under GPL-2.0. This stub points redistributors at the canonical text; the
+complete license ships inside each upstream source tree under vendor/.

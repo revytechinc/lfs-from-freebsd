@@ -1,0 +1,18 @@
+# Limine configuration template for lfs-from-freebsd
+#
+# Shared by BIOS and UEFI boot paths. Placeholders substituted by
+# scripts/build-iso.sh and scripts/install-to-zfs.sh:
+#   @@KERNEL_PATH@@  @@INITRD_PATH@@  @@CMDLINE@@  @@TITLE@@
+#
+# Serial enabled so bhyve/nmdm shows the menu under both firmwares.
+# See docs/BOOT-AND-ISO.md and docs/UEFI-BOOT.md
+
+timeout: 5
+serial: yes
+default_entry: 1
+
+/@@TITLE@@/
+    protocol: linux
+    path: boot():@@KERNEL_PATH@@
+    cmdline: @@CMDLINE@@
+    module_path: boot():@@INITRD_PATH@@

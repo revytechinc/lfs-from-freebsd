@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Plasma (Wayland)
+Comment=KDE Plasma 6 on Wayland — lfs-from-freebsd installed default
+Exec=/usr/bin/startplasma-wayland
+TryExec=/usr/bin/startplasma-wayland
+Type=Application
+DesktopNames=KDE
+X-KDE-PluginInfo-Version=6

@@ -1,0 +1,19 @@
+lfs-from-freebsd
+Copyright (c) 2026 REVYTECH, Inc.
+
+Project glue (scripts, Makefile, docs, overlays authored here) is under the
+BSD 3-Clause License in LICENSE.
+
+This repository fetches, builds, and packages third-party Free Software that
+is under different licenses, including GPL-2.0 and CDDL (OpenZFS). Those
+components retain their upstream licenses. See LICENSES/ and the source
+tarballs under vendor/ after `make fetch`.
+
+Redistributing a built ISO or disk image that includes the Linux kernel,
+BusyBox, OpenZFS, glibc, Qt, KDE Plasma, SDDM, or other GPL/LGPL/CDDL
+components obligates you to comply with those licenses (source offer,
+notices, etc.). See docs/GPL-REDISTRIBUTION.md.
+
+The live ISO boots under both legacy BIOS and UEFI. KDE Plasma 6 + SDDM
+apply to the installed ZFS root once Milestone C chapters are built — not
+to the minimal live environment.

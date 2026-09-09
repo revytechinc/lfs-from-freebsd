@@ -1,0 +1,6 @@
+COMMON DEVELOPMENT AND DISTRIBUTION LICENSE (CDDL) Version 1.0
+
+OpenZFS (illumos/OpenZFS lineage) is primarily under the CDDL.
+Full text: https://opensource.org/licenses/CDDL-1.0
+
+The complete license ships inside the OpenZFS source tree under vendor/.

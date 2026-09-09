@@ -1,0 +1,2 @@
+# Hostname for the installed ZFS root (installer may overwrite).
+lfs-from-freebsd

@@ -1,0 +1,17 @@
+/vendor/
+/out/
+*.iso
+*.img
+*.qcow2
+*.vmdk
+*.raw
+*.o
+*.ko
+*.mod
+*.cmd
+*.tmp
+*~
+.DS_Store
+*.log
+/work/
+/.cache/
