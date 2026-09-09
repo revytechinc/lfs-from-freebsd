@@ -93,12 +93,22 @@ if [ -f "$BUILD/.config" ]; then
 	sed -i.bak -e 's/^CONFIG_OBJTOOL=y$/# CONFIG_OBJTOOL is not set/' "$BUILD/.config"
 fi
 
-HOSTCFLAGS="-I$SRC/tools/include -I$SRC/include/uapi -I$SRC/tools/arch/x86/include -I$SRC/tools/arch/x86/include/uapi"
+# Only add extra -I paths for FreeBSD-native HOSTCC; linuxulator gcc already
+# has usable system <asm/*.h> and our tools/ -I paths break compiler.h.
+HOSTCFLAGS=""
+case "$HOSTCC" in
+*/compat/linux/*)
+	lf_log "linuxulator HOSTCC — using system Linux headers for host tools"
+	;;
+*)
+	HOSTCFLAGS="-I$SRC/tools/include -I$SRC/include/uapi"
+	;;
+esac
 
 gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
 	HOSTCC="$HOSTCC" \
 	${HOSTCXX:+HOSTCXX="$HOSTCXX"} \
-	HOSTCFLAGS="$HOSTCFLAGS" \
+	${HOSTCFLAGS:+HOSTCFLAGS="$HOSTCFLAGS"} \
 	INSTALL="$INSTALL" \
 	-j"$JOBS" bzImage modules
 
@@ -106,7 +116,7 @@ mkdir -p "$LF_OUT/linux/modules"
 gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
 	HOSTCC="$HOSTCC" \
 	${HOSTCXX:+HOSTCXX="$HOSTCXX"} \
-	HOSTCFLAGS="$HOSTCFLAGS" \
+	${HOSTCFLAGS:+HOSTCFLAGS="$HOSTCFLAGS"} \
 	INSTALL="$INSTALL" \
 	INSTALL_MOD_PATH="$LF_OUT/linux/modules" modules_install
 
