@@ -51,3 +51,11 @@ while IFS= read -r line || [ -n "$line" ]; do
 done < "$FRAG"
 
 gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 HOSTCC="$CLANG" olddefconfig
+
+# olddefconfig may re-enable CONFIG_OBJTOOL=y (default on x86). Force off for
+# FreeBSD host builds — objtool needs Linux asm headers we do not have.
+"$BASH" "$SC" --file "$BUILD/.config" --disable OBJTOOL
+"$BASH" "$SC" --file "$BUILD/.config" --disable STACK_VALIDATION
+"$BASH" "$SC" --file "$BUILD/.config" --disable UNWINDER_ORC
+"$BASH" "$SC" --file "$BUILD/.config" --enable UNWINDER_FRAME_POINTER
+# Do NOT re-run olddefconfig after this or OBJTOOL comes back.
