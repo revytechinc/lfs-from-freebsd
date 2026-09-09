@@ -27,6 +27,7 @@ mkdir -p "$BBDIR"
 BB="$BBDIR/busybox"
 
 if [ -x "$LF_VENDOR/busybox-static" ]; then
+	lf_verify_required "$LF_VENDOR/busybox-static" "$BUSYBOX_STATIC_SHA256"
 	cp -f "$LF_VENDOR/busybox-static" "$BB"
 	chmod +x "$BB"
 	lf_log "Using vendor BusyBox static bootstrap"

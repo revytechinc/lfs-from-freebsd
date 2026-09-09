@@ -40,12 +40,13 @@ cd lfs-from-freebsd
 # Host packages (once)
 doas pkg install -y xorriso mtools squashfs-tools e2fsprogs gmake bash curl git
 
-make fetch          # download + verify pinned sources into vendor/
-make kernel         # Linux bzImage + modules under out/
-make initramfs      # BusyBox initramfs
-make iso            # out/lfs-from-freebsd.iso (BIOS + UEFI hybrid)
-make test-boot      # bhyve UEFI smoke boot to a shell
-make test-boot-bios # bhyve/legacy BIOS smoke boot (when firmware available)
+gmake fetch          # or: make fetch  (BSD make wrapper → gmake)
+gmake toolchain
+gmake kernel
+gmake initramfs
+gmake iso            # out/lfs-from-freebsd.iso (BIOS + UEFI hybrid)
+gmake test-boot      # bhyve UEFI smoke boot to a shell
+gmake test-boot-bios # bhyve/legacy BIOS smoke boot (when firmware available)
 ```
 
 Installed systems also get **both** firmware paths (ESP + Limine BIOS install).

@@ -15,21 +15,25 @@ if [ -n "${LF_COMMON_LOADED:-}" ]; then
 fi
 LF_COMMON_LOADED=1
 
-# Resolve LF_ROOT from this file's location unless already set.
-if [ -z "${LF_ROOT:-}" ]; then
-	_lf_common="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
-	# scripts/ or scripts/builder-guest/
-	case "$_lf_common" in
-	*/scripts/builder-guest) LF_ROOT="$(CDPATH= cd -- "$_lf_common/../.." && pwd)" ;;
-	*/scripts) LF_ROOT="$(CDPATH= cd -- "$_lf_common/.." && pwd)" ;;
-	*) LF_ROOT="$(CDPATH= cd -- "$_lf_common/.." && pwd)" ;;
-	esac
-	export LF_ROOT
+# Resolve LF_ROOT from this file's location — ignore a pre-set LF_ROOT that
+# does not contain this scripts/common.sh (prevents env poisoning).
+_lf_common="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+case "$_lf_common" in
+*/scripts/builder-guest) _lf_guess="$(CDPATH= cd -- "$_lf_common/../.." && pwd)" ;;
+*/scripts) _lf_guess="$(CDPATH= cd -- "$_lf_common/.." && pwd)" ;;
+*) _lf_guess="$(CDPATH= cd -- "$_lf_common/.." && pwd)" ;;
+esac
+if [ -n "${LF_ROOT:-}" ] && [ -f "$LF_ROOT/scripts/common.sh" ] && [ -f "$LF_ROOT/versions.env" ]; then
+	:
+else
+	LF_ROOT="$_lf_guess"
 fi
+export LF_ROOT
 
-LF_VENDOR="${LF_VENDOR:-$LF_ROOT/vendor}"
-LF_OUT="${LF_OUT:-$LF_ROOT/out}"
-LF_LOGDIR="${LF_LOGDIR:-$LF_OUT/logs}"
+LF_VENDOR="${LF_ROOT}/vendor"
+LF_OUT="${LF_ROOT}/out"
+LF_LOGDIR="${LF_OUT}/logs"
+export LF_VENDOR LF_OUT LF_LOGDIR
 
 # shellcheck disable=SC1091
 . "$LF_ROOT/versions.env"

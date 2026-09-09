@@ -28,6 +28,10 @@ doas pkg install -y \
   cdrtools
 ```
 
+Use **`gmake`** (or plain `make`, which wraps to gmake via the BSD Makefile).
+GNU Make functions (`abspath`, `lastword`) are required; FreeBSD `make` alone
+cannot parse `GNUmakefile`.
+
 Notes:
 
 - **Clang/LLVM:** FreeBSD base `clang` on CURRENT often already registers
