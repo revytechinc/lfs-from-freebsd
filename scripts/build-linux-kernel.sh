@@ -39,6 +39,17 @@ if [ ! -f "$KCONFIG" ]; then
 fi
 
 CLANG="${LF_CLANG:-$(lf_clang)}"
+# Host tools (relocs, etc.) often need GCC on FreeBSD; prefer ports gcc for HOSTCC.
+HOSTCC="${LF_HOSTCC:-}"
+if [ -z "$HOSTCC" ]; then
+	for c in gcc14 gcc13 gcc12 gcc; do
+		if command -v "$c" >/dev/null 2>&1; then
+			HOSTCC="$c"
+			break
+		fi
+	done
+fi
+[ -n "$HOSTCC" ] || HOSTCC="$CLANG"
 JOBS="$(lf_jobs)"
 export MAKE=gmake
 # FreeBSD install(1) is not GNU — kbuild/objtool need ginstall from coreutils.
@@ -50,18 +61,24 @@ else
 	lf_die "ginstall missing — pkg install coreutils (GNU install required for kbuild)"
 fi
 
+lf_log "HOSTCC=$HOSTCC CLANG=$CLANG INSTALL=$INSTALL"
+
 # LLVM=1 selects the Linux target from ARCH; do not set CROSS_COMPILE on FreeBSD
 # (it confuses host-tool builds that must use FreeBSD headers).
 "$LF_ROOT/scripts/apply-kernel-config.sh" "$SRC" "$BUILD" "$KCONFIG" "$CLANG"
 
+HOSTCFLAGS="-I$SRC/tools/arch/x86/include -I$SRC/tools/arch/x86/include/uapi -I$SRC/tools/include"
+
 gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
-	HOSTCC="$CLANG" \
+	HOSTCC="$HOSTCC" \
+	HOSTCFLAGS="$HOSTCFLAGS" \
 	INSTALL="$INSTALL" \
 	-j"$JOBS" bzImage modules
 
 mkdir -p "$LF_OUT/linux/modules"
 gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
-	HOSTCC="$CLANG" \
+	HOSTCC="$HOSTCC" \
+	HOSTCFLAGS="$HOSTCFLAGS" \
 	INSTALL="$INSTALL" \
 	INSTALL_MOD_PATH="$LF_OUT/linux/modules" modules_install
 
@@ -74,7 +91,7 @@ cp -f "$BUILD/.config" "$LF_OUT/linux/config.actual"
 
 # Export headers for OpenZFS builds (builder or local).
 gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
-	HOSTCC="$CLANG" \
+	HOSTCC="$HOSTCC" \
 	INSTALL="${INSTALL:-ginstall}" \
 	INSTALL_HDR_PATH="$LF_OUT/linux/headers" headers_install
 
