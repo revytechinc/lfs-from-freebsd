@@ -38,7 +38,7 @@ git clone git@github.com:revytechinc/lfs-from-freebsd.git
 cd lfs-from-freebsd
 
 # Host packages (once)
-doas pkg install -y xorriso mtools squashfs-tools e2fsprogs gmake bash curl git
+doas pkg install -y xorriso mtools squashfs-tools e2fsprogs gmake bash curl git bison flex
 
 gmake fetch          # or: make fetch  (BSD make wrapper → gmake)
 gmake toolchain

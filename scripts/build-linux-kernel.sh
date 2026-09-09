@@ -41,18 +41,28 @@ fi
 CLANG="${LF_CLANG:-$(lf_clang)}"
 JOBS="$(lf_jobs)"
 export MAKE=gmake
+# FreeBSD install(1) is not GNU — kbuild/objtool need ginstall from coreutils.
+if command -v ginstall >/dev/null 2>&1; then
+	export INSTALL=ginstall
+elif [ -x /usr/local/bin/ginstall ]; then
+	export INSTALL=/usr/local/bin/ginstall
+else
+	lf_die "ginstall missing — pkg install coreutils (GNU install required for kbuild)"
+fi
 
+# LLVM=1 selects the Linux target from ARCH; do not set CROSS_COMPILE on FreeBSD
+# (it confuses host-tool builds that must use FreeBSD headers).
 "$LF_ROOT/scripts/apply-kernel-config.sh" "$SRC" "$BUILD" "$KCONFIG" "$CLANG"
 
 gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
 	HOSTCC="$CLANG" \
-	CROSS_COMPILE="${TARGET_TRIPLE}-" \
+	INSTALL="$INSTALL" \
 	-j"$JOBS" bzImage modules
 
 mkdir -p "$LF_OUT/linux/modules"
 gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
 	HOSTCC="$CLANG" \
-	CROSS_COMPILE="${TARGET_TRIPLE}-" \
+	INSTALL="$INSTALL" \
 	INSTALL_MOD_PATH="$LF_OUT/linux/modules" modules_install
 
 # Install path for bzImage varies; prefer arch/x86/boot/bzImage.
@@ -65,7 +75,7 @@ cp -f "$BUILD/.config" "$LF_OUT/linux/config.actual"
 # Export headers for OpenZFS builds (builder or local).
 gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
 	HOSTCC="$CLANG" \
-	CROSS_COMPILE="${TARGET_TRIPLE}-" \
+	INSTALL="${INSTALL:-ginstall}" \
 	INSTALL_HDR_PATH="$LF_OUT/linux/headers" headers_install
 
 lf_log "=== kernel OK: $LF_OUT/linux/bzImage ==="

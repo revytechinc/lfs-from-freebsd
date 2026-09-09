@@ -25,12 +25,13 @@ Install once (names are FreeBSD ports/pkg):
 doas pkg install -y \
   xorriso mtools squashfs-tools e2fsprogs \
   gmake bash curl git wget \
-  cdrtools
+  cdrtools bison flex coreutils
 ```
 
-Use **`gmake`** (or plain `make`, which wraps to gmake via the BSD Makefile).
-GNU Make functions (`abspath`, `lastword`) are required; FreeBSD `make` alone
-cannot parse `GNUmakefile`.
+Kernel kbuild needs **bison**, **flex**, and **GNU install** (`ginstall` from
+`coreutils`). Use **`gmake`** (or plain `make`, which wraps to gmake via the
+BSD Makefile). GNU Make functions (`abspath`, `lastword`) are required;
+FreeBSD `make` alone cannot parse `GNUmakefile`.
 
 Notes:
 
