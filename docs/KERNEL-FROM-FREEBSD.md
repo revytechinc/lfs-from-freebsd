@@ -27,7 +27,7 @@ Linux kbuild still compiles **host** utilities (`scripts/`, `tools/objtool`,
 ### Recommended FreeBSD host packages for native-ish kbuild
 
 ```sh
-doas pkg install -y gmake bison flex coreutils gcc14 \
+doas pkg install -y gmake bison flex coreutils gcc14 gsed \
   linux_base-rl9 linux-rl9-devtools
 ```
 

@@ -24,14 +24,16 @@ Install once (names are FreeBSD ports/pkg):
 ```sh
 doas pkg install -y \
   xorriso mtools squashfs-tools e2fsprogs \
-  gmake bash curl git wget \
-  cdrtools bison flex coreutils
+  gmake bash curl git wget gsed \
+  cdrtools bison flex coreutils \
+  linux_base-rl9 linux-rl9-devtools
 ```
 
-Kernel kbuild needs **bison**, **flex**, and **GNU install** (`ginstall` from
-`coreutils`). Use **`gmake`** (or plain `make`, which wraps to gmake via the
-BSD Makefile). GNU Make functions (`abspath`, `lastword`) are required;
-FreeBSD `make` alone cannot parse `GNUmakefile`.
+Kernel kbuild needs **bison**, **flex**, **GNU install** (`ginstall` from
+`coreutils`), and **GNU sed** (`gsed`) — FreeBSD `sed` cannot run the
+`voffset.h` recipe (`\|` BRE). Use **`gmake`** (or plain `make`, which wraps
+to gmake via the BSD Makefile). GNU Make functions (`abspath`, `lastword`) are
+required; FreeBSD `make` alone cannot parse `GNUmakefile`.
 
 Notes:
 

@@ -162,6 +162,16 @@ case "$HOSTCC" in
 	;;
 esac
 
+# FreeBSD sed(1) lacks GNU \| in BRE — voffset.h / many kbuild recipes need gsed.
+if command -v gsed >/dev/null 2>&1; then
+	SED=gsed
+elif [ -x /usr/local/bin/gsed ]; then
+	SED=/usr/local/bin/gsed
+else
+	lf_die "gsed required (pkg install gsed) — Linux kbuild VOFFSET sed needs GNU sed"
+fi
+export SED
+
 # FreeBSD clang 21 treats new diagnostics as errors against Linux 6.12 sources.
 KCFLAGS="${LF_KCFLAGS:--Wno-error=default-const-init-var-unsafe -Wno-error=default-const-init-field-unsafe -Wno-error=unterminated-string-initialization}"
 
@@ -172,6 +182,7 @@ gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
 	${HOSTAR:+HOSTAR="$HOSTAR"} \
 	${HOSTCFLAGS:+HOSTCFLAGS="$HOSTCFLAGS"} \
 	${HOSTLDFLAGS:+HOSTLDFLAGS="$HOSTLDFLAGS"} \
+	SED="$SED" \
 	KCFLAGS="$KCFLAGS" \
 	INSTALL="$INSTALL" \
 	-j"$JOBS" bzImage modules
@@ -184,6 +195,7 @@ gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
 	${HOSTAR:+HOSTAR="$HOSTAR"} \
 	${HOSTCFLAGS:+HOSTCFLAGS="$HOSTCFLAGS"} \
 	${HOSTLDFLAGS:+HOSTLDFLAGS="$HOSTLDFLAGS"} \
+	SED="$SED" \
 	KCFLAGS="$KCFLAGS" \
 	INSTALL="$INSTALL" \
 	INSTALL_MOD_PATH="$LF_OUT/linux/modules" modules_install
