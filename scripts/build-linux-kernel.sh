@@ -162,15 +162,22 @@ case "$HOSTCC" in
 	;;
 esac
 
-# FreeBSD sed(1) lacks GNU \| in BRE — voffset.h / many kbuild recipes need gsed.
+# FreeBSD sed(1) lacks GNU \| in BRE — voffset.h hardcodes `sed` (not $(SED)).
+# Shadow only the name `sed` with gsed; do not prepend other GNU tools.
 if command -v gsed >/dev/null 2>&1; then
-	SED=gsed
+	GSED="$(command -v gsed)"
 elif [ -x /usr/local/bin/gsed ]; then
-	SED=/usr/local/bin/gsed
+	GSED=/usr/local/bin/gsed
 else
 	lf_die "gsed required (pkg install gsed) — Linux kbuild VOFFSET sed needs GNU sed"
 fi
+LF_GSED_BIN="$LF_OUT/gnu-sed-bin"
+mkdir -p "$LF_GSED_BIN"
+ln -sfn "$GSED" "$LF_GSED_BIN/sed"
+export PATH="$LF_GSED_BIN:$PATH"
+SED="$GSED"
 export SED
+lf_log "PATH sed -> $GSED (voffset.h / kbuild GNU sed recipes)"
 
 # FreeBSD clang 21 treats new diagnostics as errors against Linux 6.12 sources.
 KCFLAGS="${LF_KCFLAGS:--Wno-error=default-const-init-var-unsafe -Wno-error=default-const-init-field-unsafe -Wno-error=unterminated-string-initialization}"
