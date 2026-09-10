@@ -24,7 +24,7 @@ Install once (names are FreeBSD ports/pkg):
 ```sh
 doas pkg install -y \
   xorriso mtools squashfs-tools e2fsprogs \
-  gmake bash curl git wget gsed \
+  gmake bash curl git wget gsed nasm \
   cdrtools bison flex coreutils \
   linux_base-rl9 linux-rl9-devtools
 ```
@@ -43,7 +43,10 @@ Notes:
   point `LF_CLANG` / `LF_LLVM_PREFIX` at it (see `scripts/build-cross-toolchain.sh`).
 - **bhyve UEFI:** `/usr/local/share/uefi-firmware/BHYVE_UEFI_CODE.fd` (and
   VARS) must exist for `make test-boot`.
-- **BIOS tests:** `make test-boot-bios` uses bhyve without UEFI bootrom.
+- **BIOS tests:** `make test-boot-bios` needs SeaBIOS
+  (`pkg install seabios` → `/usr/local/share/seabios/bios.bin`), or set
+  `LF_BIOS_ROM`.
+- **Limine ISO:** `pkg install nasm` (BIOS stage assemble).
 - **doas/root:** ISO assembly and bhyve usually need elevated privileges for
   `mdconfig`, raw disks, or `bhyve` itself.
 

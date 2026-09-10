@@ -69,8 +69,24 @@ if [ "$FIRMWARE" = "uefi" ]; then
 	cp -f "$UEFI_VARS_SRC" "$VARS"
 	BHYVE_ARGS="$BHYVE_ARGS -l bootrom,$UEFI_CODE,$VARS"
 else
-	lf_log "BIOS mode: no UEFI bootrom (host default / CSM). See docs/BOOT-AND-ISO.md"
-	# bhyve without bootrom uses legacy boot path when supported.
+	# Modern bhyve requires an explicit bootrom; SeaBIOS provides legacy BIOS.
+	BIOS_ROM="${LF_BIOS_ROM:-}"
+	if [ -z "$BIOS_ROM" ]; then
+		for c in \
+			/usr/local/share/seabios/bios.bin \
+			/usr/local/share/uefi-firmware/BHYVE_CSM_CODE.fd \
+			/usr/local/share/bhyve/bios.bin
+		do
+			if [ -f "$c" ]; then
+				BIOS_ROM="$c"
+				break
+			fi
+		done
+	fi
+	[ -n "$BIOS_ROM" ] && [ -f "$BIOS_ROM" ] || \
+		lf_die "BIOS bootrom missing (pkg install seabios). Set LF_BIOS_ROM=..."
+	lf_log "BIOS mode: bootrom=$BIOS_ROM"
+	BHYVE_ARGS="$BHYVE_ARGS -l bootrom,$BIOS_ROM"
 fi
 
 lf_log "Starting bhyve $VMNAME (timeout ${TIMEOUT}s); log $LF_CURRENT_LOG"
@@ -106,7 +122,8 @@ set -e
 cleanup
 trap - EXIT INT TERM
 
-if grep -Eqi 'limine|linux|busybox|Kernel panic|lfs-from-freebsd' "$LF_CURRENT_LOG" 2>/dev/null; then
+if grep -Eqi 'limine|linux|busybox|Kernel panic|lfs-from-freebsd|LFS from|BdsDxe' "$LF_CURRENT_LOG" 2>/dev/null \
+	|| strings -a "$LF_CURRENT_LOG" 2>/dev/null | grep -Eqi 'limine|LFS from|busybox|linux version'; then
 	lf_log "Saw boot-related output in $LF_CURRENT_LOG"
 else
 	lf_log "WARN: no recognizable boot strings yet in $LF_CURRENT_LOG (firmware may need console tweaks)"
