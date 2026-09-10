@@ -83,7 +83,8 @@ fi
 case "$HOSTCC" in
 */compat/linux/*)
 	LF_LXBIN="$LF_OUT/linux-host-bin"
-	mkdir -p "$LF_LXBIN"
+	LF_LXLIB="$LF_OUT/linux-host-lib"
+	mkdir -p "$LF_LXBIN" "$LF_LXLIB"
 	for t in ld as ar nm objcopy objdump strip ranlib; do
 		if [ -x "/compat/linux/usr/bin/$t" ]; then
 			ln -sfn "/compat/linux/usr/bin/$t" "$LF_LXBIN/$t"
@@ -91,13 +92,19 @@ case "$HOSTCC" in
 			ln -sfn "/compat/linux/bin/$t" "$LF_LXBIN/$t"
 		fi
 	done
-	export PATH="$LF_LXBIN:$PATH"
-	if [ -d /compat/linux/usr/lib64 ]; then
-		export LIBRARY_PATH="/compat/linux/usr/lib64${LIBRARY_PATH:+:$LIBRARY_PATH}"
-		# Prefer Linux libs for linuxulator-linked host tools (objtool needs libelf).
-		export LD_LIBRARY_PATH="/compat/linux/usr/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+	# Rocky linuxulator ships libelf.so.1 but not libelf.so — without the
+	# unversioned symlink, -lelf resolves to FreeBSD /usr/lib/libelf.so and
+	# mixes libc.so.7 with libc.so.6.
+	if [ -e /compat/linux/usr/lib64/libelf.so.1 ]; then
+		ln -sfn /compat/linux/usr/lib64/libelf.so.1 "$LF_LXLIB/libelf.so"
+		ln -sfn /compat/linux/usr/lib64/libelf.so.1 "$LF_LXLIB/libelf.so.1"
 	fi
-	lf_log "linuxulator binutils via $LF_LXBIN (FreeBSD PATH preserved)"
+	export PATH="$LF_LXBIN:$PATH"
+	export LIBRARY_PATH="$LF_LXLIB:/compat/linux/usr/lib64${LIBRARY_PATH:+:$LIBRARY_PATH}"
+	export LD_LIBRARY_PATH="$LF_LXLIB:/compat/linux/usr/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+	HOSTLDFLAGS="-L$LF_LXLIB -L/compat/linux/usr/lib64"
+	export HOSTLDFLAGS
+	lf_log "linuxulator binutils via $LF_LXBIN; libelf via $LF_LXLIB"
 	;;
 esac
 
@@ -143,6 +150,7 @@ gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
 	${HOSTLD:+HOSTLD="$HOSTLD"} \
 	${HOSTAR:+HOSTAR="$HOSTAR"} \
 	${HOSTCFLAGS:+HOSTCFLAGS="$HOSTCFLAGS"} \
+	${HOSTLDFLAGS:+HOSTLDFLAGS="$HOSTLDFLAGS"} \
 	INSTALL="$INSTALL" \
 	-j"$JOBS" bzImage modules
 
@@ -153,6 +161,7 @@ gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
 	${HOSTLD:+HOSTLD="$HOSTLD"} \
 	${HOSTAR:+HOSTAR="$HOSTAR"} \
 	${HOSTCFLAGS:+HOSTCFLAGS="$HOSTCFLAGS"} \
+	${HOSTLDFLAGS:+HOSTLDFLAGS="$HOSTLDFLAGS"} \
 	INSTALL="$INSTALL" \
 	INSTALL_MOD_PATH="$LF_OUT/linux/modules" modules_install
 
