@@ -78,9 +78,9 @@ else
 fi
 
 # When using linuxulator host tools:
-# - Stage Linux binutils + libelf.so for HOSTCC only (-B), do NOT prepend them
-#   to PATH. LLVM=1 target links must keep FreeBSD ld.lld; a global Linux ld
-#   on PATH causes SIGSYS on vdso/realmode.
+# - Stage Linux binutils + libelf.so for HOSTCC only (-B / -L), do NOT put them
+#   on PATH and do NOT export LD_LIBRARY_PATH/LIBRARY_PATH (those make FreeBSD
+#   clang load glibc → SIGSYS on vdso/realmode/random .o compiles).
 # - Rocky ships libelf.so.1 but not libelf.so; without the unversioned symlink,
 #   -lelf resolves FreeBSD /usr/lib/libelf.so and mixes libc.so.7 with glibc.
 case "$HOSTCC" in
@@ -100,15 +100,13 @@ case "$HOSTCC" in
 		ln -sfn /compat/linux/usr/lib64/libelf.so.1 "$LF_LXLIB/libelf.so.1"
 	fi
 	# Force host gcc's collect2 to this binutils dir without shadowing PATH.
-	HOSTCC="$HOSTCC -B$LF_LXBIN"
-	[ -n "$HOSTCXX" ] && HOSTCXX="$HOSTCXX -B$LF_LXBIN"
+	HOSTLDFLAGS="-L$LF_LXLIB -L/compat/linux/usr/lib64"
+	HOSTCC="$HOSTCC -B$LF_LXBIN $HOSTLDFLAGS"
+	[ -n "$HOSTCXX" ] && HOSTCXX="$HOSTCXX -B$LF_LXBIN $HOSTLDFLAGS"
 	HOSTLD="$LF_LXBIN/ld"
 	HOSTAR="$LF_LXBIN/ar"
-	export LIBRARY_PATH="$LF_LXLIB:/compat/linux/usr/lib64${LIBRARY_PATH:+:$LIBRARY_PATH}"
-	export LD_LIBRARY_PATH="$LF_LXLIB:/compat/linux/usr/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-	HOSTLDFLAGS="-L$LF_LXLIB -L/compat/linux/usr/lib64"
 	export HOSTLDFLAGS
-	lf_log "linuxulator HOSTCC=$HOSTCC (PATH stays FreeBSD; libelf=$LF_LXLIB)"
+	lf_log "linuxulator HOSTCC=$HOSTCC (no Linux LD_LIBRARY_PATH; FreeBSD clang safe)"
 	;;
 esac
 

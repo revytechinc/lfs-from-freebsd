@@ -43,8 +43,8 @@ gmake kernel
 ```
 
 Do **not** put `/compat/linux/usr/bin` (or a Linux `ld` symlink dir) first on
-`PATH` for the outer build — that shadows FreeBSD `uname` and makes LLVM
-target links use Linux `ld` (SIGSYS on vdso/realmode).
-`build-linux-kernel.sh` stages `out/linux-host-bin` and passes
-`HOSTCC="…/gcc -B…/linux-host-bin"` so only host tools see Linux binutils, plus
-`out/linux-host-lib/libelf.so` → Linux `libelf.so.1` for objtool.
+`PATH`, and do **not** export Linux `LD_LIBRARY_PATH`/`LIBRARY_PATH` into the
+FreeBSD environment — FreeBSD clang then loads glibc and dies with SIGSYS
+(vdso/realmode and even ordinary `.o` compiles).
+`build-linux-kernel.sh` stages `out/linux-host-bin` + `out/linux-host-lib`
+and passes them only via `HOSTCC="…/gcc -B… -L…"`.

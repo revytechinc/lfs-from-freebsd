@@ -60,4 +60,10 @@ gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 HOSTCC="$HOSTCC" olddef
 "$BASH" "$SC" --file "$BUILD/.config" --disable STACK_VALIDATION
 "$BASH" "$SC" --file "$BUILD/.config" --disable UNWINDER_ORC
 "$BASH" "$SC" --file "$BUILD/.config" --enable UNWINDER_FRAME_POINTER
-# Do NOT re-run olddefconfig after this or OBJTOOL comes back.
+"$BASH" "$SC" --file "$BUILD/.config" --disable MODULE_SIG
+"$BASH" "$SC" --file "$BUILD/.config" --disable MODULE_SIG_ALL
+"$BASH" "$SC" --file "$BUILD/.config" --disable SYSTEM_TRUSTED_KEYRING
+"$BASH" "$SC" --file "$BUILD/.config" --disable SYSTEM_REVOCATION_LIST
+"$BASH" "$SC" --file "$BUILD/.config" --disable IMA
+"$BASH" "$SC" --file "$BUILD/.config" --disable INTEGRITY
+# Do NOT re-run olddefconfig after this or OBJTOOL/MODULE_SIG come back.
