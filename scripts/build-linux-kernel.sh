@@ -77,9 +77,12 @@ else
 	lf_die "ginstall missing — pkg install coreutils (GNU install required for kbuild)"
 fi
 
-# When using linuxulator host tools, put *only* Linux binutils early on PATH
-# so gcc's collect2 finds Linux ld — never prepend all of /compat/linux/usr/bin
-# (that shadows FreeBSD uname/sh/gmake and breaks lf_need_freebsd).
+# When using linuxulator host tools:
+# - Stage Linux binutils + libelf.so for HOSTCC only (-B), do NOT prepend them
+#   to PATH. LLVM=1 target links must keep FreeBSD ld.lld; a global Linux ld
+#   on PATH causes SIGSYS on vdso/realmode.
+# - Rocky ships libelf.so.1 but not libelf.so; without the unversioned symlink,
+#   -lelf resolves FreeBSD /usr/lib/libelf.so and mixes libc.so.7 with glibc.
 case "$HOSTCC" in
 */compat/linux/*)
 	LF_LXBIN="$LF_OUT/linux-host-bin"
@@ -92,19 +95,20 @@ case "$HOSTCC" in
 			ln -sfn "/compat/linux/bin/$t" "$LF_LXBIN/$t"
 		fi
 	done
-	# Rocky linuxulator ships libelf.so.1 but not libelf.so — without the
-	# unversioned symlink, -lelf resolves to FreeBSD /usr/lib/libelf.so and
-	# mixes libc.so.7 with libc.so.6.
 	if [ -e /compat/linux/usr/lib64/libelf.so.1 ]; then
 		ln -sfn /compat/linux/usr/lib64/libelf.so.1 "$LF_LXLIB/libelf.so"
 		ln -sfn /compat/linux/usr/lib64/libelf.so.1 "$LF_LXLIB/libelf.so.1"
 	fi
-	export PATH="$LF_LXBIN:$PATH"
+	# Force host gcc's collect2 to this binutils dir without shadowing PATH.
+	HOSTCC="$HOSTCC -B$LF_LXBIN"
+	[ -n "$HOSTCXX" ] && HOSTCXX="$HOSTCXX -B$LF_LXBIN"
+	HOSTLD="$LF_LXBIN/ld"
+	HOSTAR="$LF_LXBIN/ar"
 	export LIBRARY_PATH="$LF_LXLIB:/compat/linux/usr/lib64${LIBRARY_PATH:+:$LIBRARY_PATH}"
 	export LD_LIBRARY_PATH="$LF_LXLIB:/compat/linux/usr/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 	HOSTLDFLAGS="-L$LF_LXLIB -L/compat/linux/usr/lib64"
 	export HOSTLDFLAGS
-	lf_log "linuxulator binutils via $LF_LXBIN; libelf via $LF_LXLIB"
+	lf_log "linuxulator HOSTCC=$HOSTCC (PATH stays FreeBSD; libelf=$LF_LXLIB)"
 	;;
 esac
 
@@ -123,26 +127,31 @@ fi
 
 # LLVM=1 selects the Linux target from ARCH; do not set CROSS_COMPILE on FreeBSD
 # (it confuses host-tool builds that must use FreeBSD headers).
-# Use the same HOSTCC for defconfig host tools — FreeBSD clang + Linux ld on
-# PATH (from linux-host-bin) crashes ld.lld with Bad system call.
 "$LF_ROOT/scripts/apply-kernel-config.sh" "$SRC" "$BUILD" "$KCONFIG" "$CLANG" "$HOSTCC"
 
 # syncconfig during bzImage may flip OBJTOOL back on — force the line in .config
 if [ -f "$BUILD/.config" ]; then
-	sed -i.bak -e 's/^CONFIG_OBJTOOL=y$/# CONFIG_OBJTOOL is not set/' "$BUILD/.config"
+	sed -i.bak \
+		-e 's/^CONFIG_OBJTOOL=y$/# CONFIG_OBJTOOL is not set/' \
+		-e 's/^CONFIG_MODULE_SIG=y$/# CONFIG_MODULE_SIG is not set/' \
+		-e 's/^CONFIG_SYSTEM_TRUSTED_KEYRING=y$/# CONFIG_SYSTEM_TRUSTED_KEYRING is not set/' \
+		"$BUILD/.config"
 fi
 
 # Only add extra -I paths for FreeBSD-native HOSTCC; linuxulator gcc already
 # has usable system <asm/*.h> and our tools/ -I paths break compiler.h.
 HOSTCFLAGS=""
 case "$HOSTCC" in
-*/compat/linux/*)
+*/compat/linux*|*" -B"*)
 	lf_log "linuxulator HOSTCC — using system Linux headers for host tools"
 	;;
 *)
 	HOSTCFLAGS="-I$SRC/tools/include -I$SRC/include/uapi"
 	;;
 esac
+
+# FreeBSD clang 21 treats new diagnostics as errors against Linux 6.12 sources.
+KCFLAGS="${LF_KCFLAGS:--Wno-error=default-const-init-var-unsafe -Wno-error=default-const-init-field-unsafe -Wno-error=unterminated-string-initialization}"
 
 gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
 	HOSTCC="$HOSTCC" \
@@ -151,6 +160,7 @@ gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
 	${HOSTAR:+HOSTAR="$HOSTAR"} \
 	${HOSTCFLAGS:+HOSTCFLAGS="$HOSTCFLAGS"} \
 	${HOSTLDFLAGS:+HOSTLDFLAGS="$HOSTLDFLAGS"} \
+	KCFLAGS="$KCFLAGS" \
 	INSTALL="$INSTALL" \
 	-j"$JOBS" bzImage modules
 
@@ -162,6 +172,7 @@ gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
 	${HOSTAR:+HOSTAR="$HOSTAR"} \
 	${HOSTCFLAGS:+HOSTCFLAGS="$HOSTCFLAGS"} \
 	${HOSTLDFLAGS:+HOSTLDFLAGS="$HOSTLDFLAGS"} \
+	KCFLAGS="$KCFLAGS" \
 	INSTALL="$INSTALL" \
 	INSTALL_MOD_PATH="$LF_OUT/linux/modules" modules_install
 

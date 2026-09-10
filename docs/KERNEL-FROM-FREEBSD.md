@@ -42,9 +42,9 @@ export MAKE=gmake INSTALL=ginstall
 gmake kernel
 ```
 
-Do **not** put `/compat/linux/usr/bin` first on `PATH` for the outer `gmake`
-invocation — Linux `uname` then shadows FreeBSD and `lf_need_freebsd` fails.
-`build-linux-kernel.sh` stages a **binutils-only** directory
-(`out/linux-host-bin` with `ld`/`as`/…) so collect2 links with Linux ld, and
-`out/linux-host-lib/libelf.so` → Linux `libelf.so.1` so objtool does not pick
-FreeBSD `/usr/lib/libelf.so`. Keep FreeBSD `uname`/`gmake`/`sh` first on PATH.
+Do **not** put `/compat/linux/usr/bin` (or a Linux `ld` symlink dir) first on
+`PATH` for the outer build — that shadows FreeBSD `uname` and makes LLVM
+target links use Linux `ld` (SIGSYS on vdso/realmode).
+`build-linux-kernel.sh` stages `out/linux-host-bin` and passes
+`HOSTCC="…/gcc -B…/linux-host-bin"` so only host tools see Linux binutils, plus
+`out/linux-host-lib/libelf.so` → Linux `libelf.so.1` for objtool.
