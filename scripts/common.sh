@@ -32,7 +32,8 @@ export LF_VENDOR LF_OUT LF_LOGDIR
 # shellcheck disable=SC1091
 . "$LF_ROOT/versions.env"
 
-lf_uname="$(uname -s)"
+# Absolute path — never trust PATH (linuxulator binutils dirs must not shadow this).
+lf_uname="$(/usr/bin/uname -s 2>/dev/null || uname -s)"
 export lf_uname
 
 lf_jobs() {

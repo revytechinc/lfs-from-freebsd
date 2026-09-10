@@ -77,15 +77,27 @@ else
 	lf_die "ginstall missing — pkg install coreutils (GNU install required for kbuild)"
 fi
 
-# When using linuxulator host tools, put Linux binutils first on PATH so
-# gcc's collect2 does not pick FreeBSD /bin/ld, and prefer Linux libelf.
+# When using linuxulator host tools, put *only* Linux binutils early on PATH
+# so gcc's collect2 finds Linux ld — never prepend all of /compat/linux/usr/bin
+# (that shadows FreeBSD uname/sh/gmake and breaks lf_need_freebsd).
 case "$HOSTCC" in
 */compat/linux/*)
-	export PATH="/compat/linux/usr/bin:/compat/linux/bin:${PATH}"
+	LF_LXBIN="$LF_OUT/linux-host-bin"
+	mkdir -p "$LF_LXBIN"
+	for t in ld as ar nm objcopy objdump strip ranlib; do
+		if [ -x "/compat/linux/usr/bin/$t" ]; then
+			ln -sfn "/compat/linux/usr/bin/$t" "$LF_LXBIN/$t"
+		elif [ -x "/compat/linux/bin/$t" ]; then
+			ln -sfn "/compat/linux/bin/$t" "$LF_LXBIN/$t"
+		fi
+	done
+	export PATH="$LF_LXBIN:$PATH"
 	if [ -d /compat/linux/usr/lib64 ]; then
 		export LIBRARY_PATH="/compat/linux/usr/lib64${LIBRARY_PATH:+:$LIBRARY_PATH}"
+		# Prefer Linux libs for linuxulator-linked host tools (objtool needs libelf).
 		export LD_LIBRARY_PATH="/compat/linux/usr/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 	fi
+	lf_log "linuxulator binutils via $LF_LXBIN (FreeBSD PATH preserved)"
 	;;
 esac
 

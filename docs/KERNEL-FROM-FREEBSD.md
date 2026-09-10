@@ -36,6 +36,14 @@ Then:
 ```sh
 export LF_HOSTCC=/compat/linux/usr/bin/gcc
 export LF_HOSTCXX=/compat/linux/usr/bin/g++
+export LF_HOSTLD=/compat/linux/usr/bin/ld
+export LF_HOSTAR=/compat/linux/usr/bin/ar
 export MAKE=gmake INSTALL=ginstall
 gmake kernel
 ```
+
+Do **not** put `/compat/linux/usr/bin` first on `PATH` for the outer `gmake`
+invocation — Linux `uname` then shadows FreeBSD and `lf_need_freebsd` fails.
+`build-linux-kernel.sh` stages a **binutils-only** directory
+(`out/linux-host-bin` with `ld`/`as`/…) so collect2 links with Linux ld/libelf
+while FreeBSD `uname`/`gmake`/`sh` stay first.
