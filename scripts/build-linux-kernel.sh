@@ -30,6 +30,20 @@ rm -rf "$SRC"
 mkdir -p "$SRC"
 tar -xJf "$LF_VENDOR/$LINUX_TARBALL" -C "$SRC" --strip-components=1
 
+# FreeBSD host: neuter host-tool traps that syncconfig keeps resurrecting.
+# 1) certs/extract-cert links FreeBSD libcrypto into a linuxulator binary.
+# 2) objtool (if still selected) fails on FreeBSD-built .o ("elf_begin: invalid command").
+if [ -f "$SRC/scripts/Makefile.lib" ]; then
+	sed -i.bak -e 's/^cmd_objtool = .*/cmd_objtool =/' "$SRC/scripts/Makefile.lib"
+fi
+if [ -f "$SRC/certs/Makefile" ]; then
+	sed -i.bak \
+		-e 's/^hostprogs := extract-cert$/hostprogs :=/' \
+		-e 's|^      cmd_extract_certs  = .*|      cmd_extract_certs  = : > $@|' \
+		-e 's| \$(obj)/extract-cert||g' \
+		"$SRC/certs/Makefile"
+fi
+
 rm -rf "$BUILD"
 mkdir -p "$BUILD"
 
@@ -127,13 +141,13 @@ fi
 # (it confuses host-tool builds that must use FreeBSD headers).
 "$LF_ROOT/scripts/apply-kernel-config.sh" "$SRC" "$BUILD" "$KCONFIG" "$CLANG" "$HOSTCC"
 
-# syncconfig during bzImage may flip OBJTOOL back on — force the line in .config
+# syncconfig during bzImage may flip options back — force critical offs in .config
 if [ -f "$BUILD/.config" ]; then
-	sed -i.bak \
-		-e 's/^CONFIG_OBJTOOL=y$/# CONFIG_OBJTOOL is not set/' \
-		-e 's/^CONFIG_MODULE_SIG=y$/# CONFIG_MODULE_SIG is not set/' \
-		-e 's/^CONFIG_SYSTEM_TRUSTED_KEYRING=y$/# CONFIG_SYSTEM_TRUSTED_KEYRING is not set/' \
-		"$BUILD/.config"
+	for opt in OBJTOOL STACK_VALIDATION MODULE_SIG MODULE_SIG_ALL \
+		SYSTEM_TRUSTED_KEYRING SYSTEM_REVOCATION_LIST IMA INTEGRITY; do
+		sed -i.bak -e "/^CONFIG_${opt}=/d" -e "/^# CONFIG_${opt} is not set/d" "$BUILD/.config"
+		echo "# CONFIG_${opt} is not set" >> "$BUILD/.config"
+	done
 fi
 
 # Only add extra -I paths for FreeBSD-native HOSTCC; linuxulator gcc already
