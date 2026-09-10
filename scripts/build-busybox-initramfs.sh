@@ -47,9 +47,11 @@ if [ "$MODE" = "busybox-only" ]; then
 fi
 
 # --- assemble initramfs tree ---
+# FreeBSD /bin/sh has no brace expansion — list dirs explicitly.
 IR="$LF_OUT/initramfs/root"
 rm -rf "$IR"
-mkdir -p "$IR"/{bin,sbin,dev,proc,sys,run,tmp,newroot,mnt,lib,lib64,etc}
+mkdir -p "$IR/bin" "$IR/sbin" "$IR/dev" "$IR/proc" "$IR/sys" \
+	"$IR/run" "$IR/tmp" "$IR/newroot" "$IR/mnt" "$IR/lib" "$IR/lib64" "$IR/etc"
 cp -f "$BB" "$IR/bin/busybox"
 chmod +x "$IR/bin/busybox"
 # Do NOT execute the Linux ELF BusyBox on FreeBSD. Create a minimal applet
