@@ -15,10 +15,12 @@ SRC="$1"
 BUILD="$2"
 FRAG="$3"
 CLANG="$4"
+# Optional 5th arg: HOSTCC for kbuild host tools (prefer linuxulator gcc on FreeBSD).
+HOSTCC="${5:-$CLANG}"
 export MAKE=gmake
 export TARGET_TRIPLE="${TARGET_TRIPLE:-x86_64-linux-gnu}"
 
-gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 HOSTCC="$CLANG" defconfig
+gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 HOSTCC="$HOSTCC" defconfig
 
 # Prefer in-tree scripts/config when present (shebang is bash — invoke explicitly).
 SC="$SRC/scripts/config"
@@ -50,7 +52,7 @@ while IFS= read -r line || [ -n "$line" ]; do
 	esac
 done < "$FRAG"
 
-gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 HOSTCC="$CLANG" olddefconfig
+gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 HOSTCC="$HOSTCC" olddefconfig
 
 # olddefconfig may re-enable CONFIG_OBJTOOL=y (default on x86). Force off for
 # FreeBSD host builds — objtool needs Linux asm headers we do not have.

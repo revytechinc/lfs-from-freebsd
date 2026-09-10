@@ -116,7 +116,9 @@ fi
 
 # LLVM=1 selects the Linux target from ARCH; do not set CROSS_COMPILE on FreeBSD
 # (it confuses host-tool builds that must use FreeBSD headers).
-"$LF_ROOT/scripts/apply-kernel-config.sh" "$SRC" "$BUILD" "$KCONFIG" "$CLANG"
+# Use the same HOSTCC for defconfig host tools — FreeBSD clang + Linux ld on
+# PATH (from linux-host-bin) crashes ld.lld with Bad system call.
+"$LF_ROOT/scripts/apply-kernel-config.sh" "$SRC" "$BUILD" "$KCONFIG" "$CLANG" "$HOSTCC"
 
 # syncconfig during bzImage may flip OBJTOOL back on — force the line in .config
 if [ -f "$BUILD/.config" ]; then
