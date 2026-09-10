@@ -26,7 +26,9 @@ mkdir -p "$TREE"
 BB="${LF_OUT}/busybox/busybox"
 [ -x "$BB" ] || lf_die "busybox missing; run make busybox"
 
-mkdir -p "$TREE"/{bin,sbin,etc,proc,sys,dev,tmp,run,root,mnt,media,lib,usr/bin,usr/sbin,live/bin}
+mkdir -p "$TREE/bin" "$TREE/sbin" "$TREE/etc" "$TREE/proc" "$TREE/sys" \
+	"$TREE/dev" "$TREE/tmp" "$TREE/run" "$TREE/root" "$TREE/mnt" "$TREE/media" \
+	"$TREE/lib" "$TREE/usr/bin" "$TREE/usr/sbin" "$TREE/live/bin"
 cp -f "$BB" "$TREE/bin/busybox"
 chmod +x "$TREE/bin/busybox"
 for applet in sh ash mount umount mkdir ls cat echo sleep ln cp mv rm chmod \
