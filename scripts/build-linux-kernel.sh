@@ -58,6 +58,14 @@ HOSTCXX="${LF_HOSTCXX:-}"
 if [ -z "$HOSTCXX" ] && [ -x /compat/linux/usr/bin/g++ ]; then
 	HOSTCXX=/compat/linux/usr/bin/g++
 fi
+HOSTLD="${LF_HOSTLD:-}"
+HOSTAR="${LF_HOSTAR:-}"
+if [ -z "$HOSTLD" ] && [ -x /compat/linux/usr/bin/ld ]; then
+	HOSTLD=/compat/linux/usr/bin/ld
+fi
+if [ -z "$HOSTAR" ] && [ -x /compat/linux/usr/bin/ar ]; then
+	HOSTAR=/compat/linux/usr/bin/ar
+fi
 JOBS="$(lf_jobs)"
 export MAKE=gmake
 # FreeBSD install(1) is not GNU — kbuild/objtool need ginstall from coreutils.
@@ -69,7 +77,7 @@ else
 	lf_die "ginstall missing — pkg install coreutils (GNU install required for kbuild)"
 fi
 
-lf_log "HOSTCC=$HOSTCC CLANG=$CLANG INSTALL=$INSTALL"
+lf_log "HOSTCC=$HOSTCC HOSTLD=${HOSTLD:-default} CLANG=$CLANG INSTALL=$INSTALL"
 
 # Tools (objtool) expect <asm/types.h>; on x86 Linux this comes via the
 # tools include path. Provide a tiny stub that pulls asm-generic.
@@ -108,6 +116,8 @@ esac
 gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
 	HOSTCC="$HOSTCC" \
 	${HOSTCXX:+HOSTCXX="$HOSTCXX"} \
+	${HOSTLD:+HOSTLD="$HOSTLD"} \
+	${HOSTAR:+HOSTAR="$HOSTAR"} \
 	${HOSTCFLAGS:+HOSTCFLAGS="$HOSTCFLAGS"} \
 	INSTALL="$INSTALL" \
 	-j"$JOBS" bzImage modules
@@ -116,6 +126,8 @@ mkdir -p "$LF_OUT/linux/modules"
 gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
 	HOSTCC="$HOSTCC" \
 	${HOSTCXX:+HOSTCXX="$HOSTCXX"} \
+	${HOSTLD:+HOSTLD="$HOSTLD"} \
+	${HOSTAR:+HOSTAR="$HOSTAR"} \
 	${HOSTCFLAGS:+HOSTCFLAGS="$HOSTCFLAGS"} \
 	INSTALL="$INSTALL" \
 	INSTALL_MOD_PATH="$LF_OUT/linux/modules" modules_install
