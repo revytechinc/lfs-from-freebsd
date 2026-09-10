@@ -77,7 +77,17 @@ else
 	lf_die "ginstall missing — pkg install coreutils (GNU install required for kbuild)"
 fi
 
-lf_log "HOSTCC=$HOSTCC HOSTLD=${HOSTLD:-default} CLANG=$CLANG INSTALL=$INSTALL"
+# When using linuxulator host tools, put Linux binutils first on PATH so
+# gcc's collect2 does not pick FreeBSD /bin/ld, and prefer Linux libelf.
+case "$HOSTCC" in
+*/compat/linux/*)
+	export PATH="/compat/linux/usr/bin:/compat/linux/bin:${PATH}"
+	if [ -d /compat/linux/usr/lib64 ]; then
+		export LIBRARY_PATH="/compat/linux/usr/lib64${LIBRARY_PATH:+:$LIBRARY_PATH}"
+		export LD_LIBRARY_PATH="/compat/linux/usr/lib64${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+	fi
+	;;
+esac
 
 # Tools (objtool) expect <asm/types.h>; on x86 Linux this comes via the
 # tools include path. Provide a tiny stub that pulls asm-generic.

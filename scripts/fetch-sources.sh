@@ -36,8 +36,8 @@ if [ -n "${BUILDER_ALPINE_URL:-}" ]; then
 fi
 
 # LFS book wget-list / md5sums (metadata only; empty SHA allowed with warning).
-lf_fetch "$LFS_WGET_LIST_URL" "$LF_VENDOR/lfs-${LFS_BOOK_VERSION}-wget-list" ""
-lf_fetch "$LFS_MD5SUMS_URL" "$LF_VENDOR/lfs-${LFS_BOOK_VERSION}-md5sums" ""
+lf_fetch "$LFS_WGET_LIST_URL" "$LF_VENDOR/lfs-${LFS_BOOK_VERSION}-wget-list" "${LFS_WGET_LIST_SHA256:-}"
+lf_fetch "$LFS_MD5SUMS_URL" "$LF_VENDOR/lfs-${LFS_BOOK_VERSION}-md5sums" "${LFS_MD5SUMS_SHA256:-}"
 
 # Machine-readable lock for Phase 4 hardening / audits.
 {
