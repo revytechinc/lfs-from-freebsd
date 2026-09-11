@@ -46,6 +46,7 @@ gmake kernel
 | BSD `make` | Always `gmake` |
 | FreeBSD `install` | `INSTALL=ginstall` |
 | FreeBSD `sed` / `\|` in VOFFSET | `gsed` on PATH as `sed` |
+| FreeBSD `elf.h` vs Linux `relocs.c` | Compat shim after `#include <elf.h>` (`JMP_SLOT`↔`JUMP_SLOT`, undef `ElfW`) |
 | `objtool` / ORC | Disabled in fragment; empty `cmd_objtool`; drop `prepare: tools/objtool` |
 | `extract-cert` / OpenSSL mix | Cert hostprog stubbed; MODULE_SIG off |
 | SELinux `mdp` | `CONFIG_SECURITY_SELINUX=n` |

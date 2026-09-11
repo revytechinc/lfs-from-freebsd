@@ -37,6 +37,29 @@ rm -rf "$SRC"
 mkdir -p "$SRC"
 tar -xJf "$LF_VENDOR/$LINUX_TARBALL" -C "$SRC" --strip-components=1
 
+# FreeBSD host ELF headers differ from Linux (JMP_SLOT vs JUMP_SLOT; ElfW).
+# Keep Linux relocs host-tool build working without linuxulator.
+if [ -f "$SRC/arch/x86/tools/relocs.h" ] && \
+	! grep -q 'lfs-from-freebsd FreeBSD ELF compat' "$SRC/arch/x86/tools/relocs.h"
+then
+	# Insert after #include <elf.h>
+	awk '
+		{ print }
+		/#include <elf.h>/ && !done {
+			print "#ifdef __FreeBSD__"
+			print "/* lfs-from-freebsd FreeBSD ELF compat — docs/KERNEL-FROM-FREEBSD.md */"
+			print "#undef ElfW"
+			print "#undef ELF_ST_VISIBILITY"
+			print "#ifndef R_X86_64_JUMP_SLOT"
+			print "#define R_X86_64_JUMP_SLOT R_X86_64_JMP_SLOT"
+			print "#endif"
+			print "#endif"
+			done=1
+		}
+	' "$SRC/arch/x86/tools/relocs.h" > "$SRC/arch/x86/tools/relocs.h.new"
+	mv "$SRC/arch/x86/tools/relocs.h.new" "$SRC/arch/x86/tools/relocs.h"
+fi
+
 # Neuter Linux-only host-tool traps that fight FreeBSD HOSTCC.
 # Keep these patches minimal and documented in KERNEL-FROM-FREEBSD.md.
 if [ -f "$SRC/scripts/Makefile.lib" ]; then
