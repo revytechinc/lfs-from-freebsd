@@ -12,9 +12,13 @@ Classic [Linux From Scratch](https://www.linuxfromscratch.org/) assumes you
 are already on a Linux host with a working toolchain. Our product claim is
 the reverse of the nested-virt work: **drive Linux construction from FreeBSD**.
 
-A pure FreeBSD→Linux cross build of *everything* (especially glibc and the
-LFS temporary toolchain) is a research project of its own. We therefore split
-responsibilities:
+**Pure FreeBSD on the build host** — no linuxulator, no `/compat/linux` host
+tools. FreeBSD clang/LLVM cross-builds the Linux kernel; FreeBSD packages
+assemble the hybrid ISO and run bhyve tests.
+
+A pure FreeBSD→Linux build of *everything* (especially glibc and the LFS
+temporary toolchain, and OpenZFS’s Linux module link) still needs a **real
+Linux builder VM** for those chapters — not an ABI emulator:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -22,7 +26,7 @@ responsibilities:
 │  (the CloudBSD build host / CloudBSD)                            │
 │                                                                 │
 │  • fetch + verify sources                                       │
-│  • cross-build Linux kernel (LLVM)                              │
+│  • cross-build Linux kernel (LLVM, FreeBSD HOSTCC)              │
 │  • assemble BusyBox initramfs / live root                       │
 │  • build Limine hybrid UEFI ISO                                 │
 │  • orchestrate bhyve smoke tests                                │

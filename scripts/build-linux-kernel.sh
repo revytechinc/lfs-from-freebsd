@@ -2,14 +2,15 @@
 # Copyright (c) 2026 REVYTECH, Inc.
 # SPDX-License-Identifier: BSD-3-Clause
 #
-# build-linux-kernel.sh — cross-build Linux on FreeBSD with LLVM.
+# build-linux-kernel.sh — PURE FreeBSD native build of Linux (LLVM target).
 #
-# WHAT: Extract vendor/linux-*.tar.xz, apply config/kernel/lfs-from-freebsd.config,
-#       build bzImage + modules with clang --target=x86_64-linux-gnu / LLVM=1.
-# WHY:  Core “other way around” claim — Linux kernel from FreeBSD.
-# HOST: FreeBSD (the CloudBSD build host). Requires prior `make toolchain` and `make fetch`.
-# OUT:  out/linux/bzImage, out/linux/System.map, out/linux/modules/, headers tree
-# DOCS: docs/ARCHITECTURE.md, docs/BUILD-HOST.md, docs/DESKTOP-PLASMA6.md (DRM opts)
+# WHAT: Extract vendor/linux-*.tar.xz, apply config fragment, build bzImage +
+#       modules with FreeBSD clang/LLVM (LLVM=1). Host tools use FreeBSD HOSTCC.
+# WHY:  Product claim — Linux kernel from FreeBSD. No linuxulator, no Linux
+#       HOSTCC. See docs/ARCHITECTURE.md and docs/KERNEL-FROM-FREEBSD.md.
+# HOST: FreeBSD only. Requires gmake, gsed, ginstall, bison, flex.
+# OUT:  out/linux/bzImage, System.map, modules/, headers/
+# DOCS: docs/KERNEL-FROM-FREEBSD.md
 
 set -eu
 . "$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)/common.sh"
@@ -21,7 +22,14 @@ lf_mkdirs
 
 lf_start_log kernel
 
-lf_log "=== build-linux-kernel ${LINUX_VERSION} ==="
+lf_log "=== build-linux-kernel ${LINUX_VERSION} (PURE FreeBSD; no linuxulator) ==="
+
+# Refuse linuxulator — that path is deliberately unsupported.
+case "${LF_HOSTCC:-}${LF_HOSTCXX:-}${LF_HOSTLD:-}${LF_HOSTAR:-}" in
+*/compat/linux/*)
+	lf_die "linuxulator HOST* is forbidden. Use FreeBSD clang/gcc only (docs/KERNEL-FROM-FREEBSD.md)"
+	;;
+esac
 
 SRC="$LF_OUT/linux/src"
 BUILD="$LF_OUT/linux/build"
@@ -30,9 +38,8 @@ rm -rf "$SRC"
 mkdir -p "$SRC"
 tar -xJf "$LF_VENDOR/$LINUX_TARBALL" -C "$SRC" --strip-components=1
 
-# FreeBSD host: neuter host-tool traps that syncconfig keeps resurrecting.
-# 1) certs/extract-cert links FreeBSD libcrypto into a linuxulator binary.
-# 2) objtool (if still selected) fails on FreeBSD-built .o ("elf_begin: invalid command").
+# Neuter Linux-only host-tool traps that fight FreeBSD HOSTCC.
+# Keep these patches minimal and documented in KERNEL-FROM-FREEBSD.md.
 if [ -f "$SRC/scripts/Makefile.lib" ]; then
 	sed -i.bak -e 's/^cmd_objtool = .*/cmd_objtool =/' "$SRC/scripts/Makefile.lib"
 fi
@@ -48,88 +55,40 @@ rm -rf "$BUILD"
 mkdir -p "$BUILD"
 
 KCONFIG="$LF_ROOT/config/kernel/lfs-from-freebsd.config"
-if [ ! -f "$KCONFIG" ]; then
-	lf_die "missing $KCONFIG"
-fi
+[ -f "$KCONFIG" ] || lf_die "missing $KCONFIG"
 
 CLANG="${LF_CLANG:-$(lf_clang)}"
-# Host tools: prefer Linux ABI gcc under linuxulator so <asm/types.h> resolves.
+
+# Host tools: FreeBSD-native only (clang or ports gcc). Never /compat/linux.
 HOSTCC="${LF_HOSTCC:-}"
 if [ -z "$HOSTCC" ]; then
-	if [ -x /compat/linux/usr/bin/gcc ]; then
-		HOSTCC=/compat/linux/usr/bin/gcc
-	else
-		for c in gcc14 gcc13 gcc12 gcc; do
-			if command -v "$c" >/dev/null 2>&1; then
-				HOSTCC="$c"
-				break
-			fi
-		done
-	fi
+	for c in gcc14 gcc13 gcc12 gcc; do
+		if command -v "$c" >/dev/null 2>&1; then
+			HOSTCC="$c"
+			break
+		fi
+	done
 fi
 [ -n "$HOSTCC" ] || HOSTCC="$CLANG"
 HOSTCXX="${LF_HOSTCXX:-}"
-if [ -z "$HOSTCXX" ] && [ -x /compat/linux/usr/bin/g++ ]; then
-	HOSTCXX=/compat/linux/usr/bin/g++
-fi
 HOSTLD="${LF_HOSTLD:-}"
 HOSTAR="${LF_HOSTAR:-}"
-if [ -z "$HOSTLD" ] && [ -x /compat/linux/usr/bin/ld ]; then
-	HOSTLD=/compat/linux/usr/bin/ld
-fi
-if [ -z "$HOSTAR" ] && [ -x /compat/linux/usr/bin/ar ]; then
-	HOSTAR=/compat/linux/usr/bin/ar
-fi
+
 JOBS="$(lf_jobs)"
 export MAKE=gmake
-# FreeBSD install(1) is not GNU — kbuild/objtool need ginstall from coreutils.
 if command -v ginstall >/dev/null 2>&1; then
 	export INSTALL=ginstall
 elif [ -x /usr/local/bin/ginstall ]; then
 	export INSTALL=/usr/local/bin/ginstall
 else
-	lf_die "ginstall missing — pkg install coreutils (GNU install required for kbuild)"
+	lf_die "ginstall missing — pkg install coreutils"
 fi
 
-# When using linuxulator host tools:
-# - Stage Linux binutils + libelf.so for HOSTCC only (-B / -L), do NOT put them
-#   on PATH and do NOT export LD_LIBRARY_PATH/LIBRARY_PATH (those make FreeBSD
-#   clang load glibc → SIGSYS on vdso/realmode/random .o compiles).
-# - Rocky ships libelf.so.1 but not libelf.so; without the unversioned symlink,
-#   -lelf resolves FreeBSD /usr/lib/libelf.so and mixes libc.so.7 with glibc.
-case "$HOSTCC" in
-*/compat/linux/*)
-	LF_LXBIN="$LF_OUT/linux-host-bin"
-	LF_LXLIB="$LF_OUT/linux-host-lib"
-	mkdir -p "$LF_LXBIN" "$LF_LXLIB"
-	for t in ld as ar nm objcopy objdump strip ranlib; do
-		if [ -x "/compat/linux/usr/bin/$t" ]; then
-			ln -sfn "/compat/linux/usr/bin/$t" "$LF_LXBIN/$t"
-		elif [ -x "/compat/linux/bin/$t" ]; then
-			ln -sfn "/compat/linux/bin/$t" "$LF_LXBIN/$t"
-		fi
-	done
-	if [ -e /compat/linux/usr/lib64/libelf.so.1 ]; then
-		ln -sfn /compat/linux/usr/lib64/libelf.so.1 "$LF_LXLIB/libelf.so"
-		ln -sfn /compat/linux/usr/lib64/libelf.so.1 "$LF_LXLIB/libelf.so.1"
-	fi
-	# Force host gcc's collect2 to this binutils dir without shadowing PATH.
-	HOSTLDFLAGS="-L$LF_LXLIB -L/compat/linux/usr/lib64"
-	HOSTCC="$HOSTCC -B$LF_LXBIN $HOSTLDFLAGS"
-	[ -n "$HOSTCXX" ] && HOSTCXX="$HOSTCXX -B$LF_LXBIN $HOSTLDFLAGS"
-	HOSTLD="$LF_LXBIN/ld"
-	HOSTAR="$LF_LXBIN/ar"
-	export HOSTLDFLAGS
-	lf_log "linuxulator HOSTCC=$HOSTCC (no Linux LD_LIBRARY_PATH; FreeBSD clang safe)"
-	;;
-esac
-
-# Tools (objtool) expect <asm/types.h>; on x86 Linux this comes via the
-# tools include path. Provide a tiny stub that pulls asm-generic.
+# Host-tool stubs: Linux tools/ expect <asm/types.h> during some host compiles.
 mkdir -p "$SRC/tools/include/asm"
 if [ ! -f "$SRC/tools/include/asm/types.h" ]; then
 	cat > "$SRC/tools/include/asm/types.h" <<'EOF'
-/* FreeBSD host stub for Linux tools/ builds — see docs/KERNEL-FROM-FREEBSD.md */
+/* FreeBSD-native stub for Linux tools/ — docs/KERNEL-FROM-FREEBSD.md */
 #ifndef _LF_TOOLS_ASM_TYPES_H
 #define _LF_TOOLS_ASM_TYPES_H
 #include <asm-generic/types.h>
@@ -137,39 +96,29 @@ if [ ! -f "$SRC/tools/include/asm/types.h" ]; then
 EOF
 fi
 
-# LLVM=1 selects the Linux target from ARCH; do not set CROSS_COMPILE on FreeBSD
-# (it confuses host-tool builds that must use FreeBSD headers).
+lf_log "HOSTCC=$HOSTCC CLANG=$CLANG INSTALL=$INSTALL (FreeBSD-native)"
+
 "$LF_ROOT/scripts/apply-kernel-config.sh" "$SRC" "$BUILD" "$KCONFIG" "$CLANG" "$HOSTCC"
 
-# syncconfig during bzImage may flip options back — force critical offs in .config
 if [ -f "$BUILD/.config" ]; then
 	for opt in OBJTOOL STACK_VALIDATION MODULE_SIG MODULE_SIG_ALL \
-		SYSTEM_TRUSTED_KEYRING SYSTEM_REVOCATION_LIST IMA INTEGRITY; do
+		SYSTEM_TRUSTED_KEYRING SYSTEM_REVOCATION_LIST IMA INTEGRITY \
+		SECURITY_SELINUX; do
 		sed -i.bak -e "/^CONFIG_${opt}=/d" -e "/^# CONFIG_${opt} is not set/d" "$BUILD/.config"
 		echo "# CONFIG_${opt} is not set" >> "$BUILD/.config"
 	done
 fi
 
-# Only add extra -I paths for FreeBSD-native HOSTCC; linuxulator gcc already
-# has usable system <asm/*.h> and our tools/ -I paths break compiler.h.
-HOSTCFLAGS=""
-case "$HOSTCC" in
-*/compat/linux*|*" -B"*)
-	lf_log "linuxulator HOSTCC — using system Linux headers for host tools"
-	;;
-*)
-	HOSTCFLAGS="-I$SRC/tools/include -I$SRC/include/uapi"
-	;;
-esac
+# FreeBSD HOSTCC needs Linux tools/ uapi includes for some host programs.
+HOSTCFLAGS="${LF_HOSTCFLAGS:--I$SRC/tools/include -I$SRC/include/uapi}"
 
-# FreeBSD sed(1) lacks GNU \| in BRE — voffset.h hardcodes `sed` (not $(SED)).
-# Shadow only the name `sed` with gsed; do not prepend other GNU tools.
+# FreeBSD sed lacks GNU \| — voffset.h recipes hardcode `sed`.
 if command -v gsed >/dev/null 2>&1; then
 	GSED="$(command -v gsed)"
 elif [ -x /usr/local/bin/gsed ]; then
 	GSED=/usr/local/bin/gsed
 else
-	lf_die "gsed required (pkg install gsed) — Linux kbuild VOFFSET sed needs GNU sed"
+	lf_die "gsed required (pkg install gsed)"
 fi
 LF_GSED_BIN="$LF_OUT/gnu-sed-bin"
 mkdir -p "$LF_GSED_BIN"
@@ -177,9 +126,8 @@ ln -sfn "$GSED" "$LF_GSED_BIN/sed"
 export PATH="$LF_GSED_BIN:$PATH"
 SED="$GSED"
 export SED
-lf_log "PATH sed -> $GSED (voffset.h / kbuild GNU sed recipes)"
 
-# FreeBSD clang 21 treats new diagnostics as errors against Linux 6.12 sources.
+# FreeBSD clang may be newer than Linux 6.12 expects — keep as warnings.
 KCFLAGS="${LF_KCFLAGS:--Wno-error=default-const-init-var-unsafe -Wno-error=default-const-init-field-unsafe -Wno-error=unterminated-string-initialization}"
 
 gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
@@ -187,8 +135,7 @@ gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
 	${HOSTCXX:+HOSTCXX="$HOSTCXX"} \
 	${HOSTLD:+HOSTLD="$HOSTLD"} \
 	${HOSTAR:+HOSTAR="$HOSTAR"} \
-	${HOSTCFLAGS:+HOSTCFLAGS="$HOSTCFLAGS"} \
-	${HOSTLDFLAGS:+HOSTLDFLAGS="$HOSTLDFLAGS"} \
+	HOSTCFLAGS="$HOSTCFLAGS" \
 	SED="$SED" \
 	KCFLAGS="$KCFLAGS" \
 	INSTALL="$INSTALL" \
@@ -200,24 +147,21 @@ gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
 	${HOSTCXX:+HOSTCXX="$HOSTCXX"} \
 	${HOSTLD:+HOSTLD="$HOSTLD"} \
 	${HOSTAR:+HOSTAR="$HOSTAR"} \
-	${HOSTCFLAGS:+HOSTCFLAGS="$HOSTCFLAGS"} \
-	${HOSTLDFLAGS:+HOSTLDFLAGS="$HOSTLDFLAGS"} \
+	HOSTCFLAGS="$HOSTCFLAGS" \
 	SED="$SED" \
 	KCFLAGS="$KCFLAGS" \
 	INSTALL="$INSTALL" \
 	INSTALL_MOD_PATH="$LF_OUT/linux/modules" modules_install
 
-# Install path for bzImage varies; prefer arch/x86/boot/bzImage.
 BZIMAGE="$BUILD/arch/x86/boot/bzImage"
 [ -f "$BZIMAGE" ] || lf_die "bzImage not found at $BZIMAGE"
 cp -f "$BZIMAGE" "$LF_OUT/linux/bzImage"
 cp -f "$BUILD/System.map" "$LF_OUT/linux/System.map" 2>/dev/null || true
 cp -f "$BUILD/.config" "$LF_OUT/linux/config.actual"
 
-# Export headers for OpenZFS builds (builder or local).
 gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 \
 	HOSTCC="$HOSTCC" \
 	INSTALL="${INSTALL:-ginstall}" \
 	INSTALL_HDR_PATH="$LF_OUT/linux/headers" headers_install
 
-lf_log "=== kernel OK: $LF_OUT/linux/bzImage ==="
+lf_log "=== kernel OK (pure FreeBSD): $LF_OUT/linux/bzImage ==="

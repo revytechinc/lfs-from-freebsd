@@ -1,50 +1,63 @@
-# Building the Linux kernel from FreeBSD (host tools)
+# Building the Linux kernel from FreeBSD — PURE FreeBSD
 
 <!-- Copyright (c) 2026 REVYTECH, Inc. -->
 
-## What works natively on FreeBSD
+## Policy
 
-- Fetch + verify sources (`gmake fetch`)
-- LLVM/clang can emit `x86_64-linux-gnu` objects (toolchain probe)
-- `defconfig` / `olddefconfig` with **gmake**, **bison**, **flex**
-- ISO packaging with Limine + xorriso once `bzImage` exists
+**No linuxulator.** Host tools and orchestration run as FreeBSD natives.
+The Linux *target* is produced with FreeBSD’s LLVM (`LLVM=1`).
 
-## Host-tool friction
+`LF_HOSTCC` / `LF_HOSTLD` pointing at `/compat/linux/…` is a hard error.
 
-Linux kbuild still compiles **host** utilities (`scripts/`, `tools/objtool`,
-`arch/x86/tools/relocs`) with `HOSTCC`. Those expect a Linux-ish environment:
+## What FreeBSD does natively
 
-| Symptom | Mitigation in this repo |
-|---------|-------------------------|
-| BSD `make` parses kernel Makefile | Always `gmake`; `export MAKE=gmake` |
-| `bison` / `flex` missing | `pkg install bison flex` |
-| `install -m` fails | `pkg install coreutils`; `INSTALL=ginstall` |
-| SELinux `mdp` needs `asm/types.h` | `CONFIG_SECURITY_SELINUX=n` in fragment |
-| objtool needs Linux asm headers | `CONFIG_OBJTOOL=n`, frame-pointer unwinder |
-| `relocs.c` ARRAY_SIZE / clang | Prefer ports **gcc** or linuxulator gcc as `HOSTCC` |
-| objtool needs Linux `asm/*.h` | Prefer **`/compat/linux/usr/bin/gcc`** (`linux-rl9-devtools`) so host tools see real Linux headers |
+| Step | Tooling |
+|------|---------|
+| Fetch / verify | FreeBSD `fetch`/`curl`, sha256 |
+| `defconfig` / fragment | `gmake`, `bison`, `flex`, FreeBSD `HOSTCC` |
+| Target compile / link | FreeBSD `clang` / `ld.lld` via `LLVM=1` |
+| Host utilities (`fixdep`, `relocs`, …) | FreeBSD `HOSTCC` (ports `gcc14` or base `clang`) + small stubs |
+| ISO | Limine + `xorriso` on FreeBSD |
 
-### Recommended FreeBSD host packages for native-ish kbuild
+## Packages (FreeBSD only)
 
 ```sh
-doas pkg install -y gmake bison flex coreutils gcc14 gsed \
-  linux_base-rl9 linux-rl9-devtools
+doas pkg install -y gmake bison flex coreutils gsed gcc14 \
+  xorriso mtools squashfs-tools nasm
+# optional for BIOS smoke tests:
+doas pkg install -y seabios
 ```
 
-Then:
+Do **not** install `linux_base-*` / `linux-*-devtools` for this project.
+
+## Build
 
 ```sh
-export LF_HOSTCC=/compat/linux/usr/bin/gcc
-export LF_HOSTCXX=/compat/linux/usr/bin/g++
-export LF_HOSTLD=/compat/linux/usr/bin/ld
-export LF_HOSTAR=/compat/linux/usr/bin/ar
 export MAKE=gmake INSTALL=ginstall
+# optional: LF_HOSTCC=gcc14   (default: first ports gcc*, else clang)
 gmake kernel
 ```
 
-Do **not** put `/compat/linux/usr/bin` (or a Linux `ld` symlink dir) first on
-`PATH`, and do **not** export Linux `LD_LIBRARY_PATH`/`LIBRARY_PATH` into the
-FreeBSD environment — FreeBSD clang then loads glibc and dies with SIGSYS
-(vdso/realmode and even ordinary `.o` compiles).
-`build-linux-kernel.sh` stages `out/linux-host-bin` + `out/linux-host-lib`
-and passes them only via `HOSTCC="…/gcc -B… -L…"`.
+## Host-tool mitigations (still FreeBSD)
+
+| Friction | Mitigation |
+|----------|------------|
+| BSD `make` | Always `gmake` |
+| FreeBSD `install` | `INSTALL=ginstall` |
+| FreeBSD `sed` / `\|` in VOFFSET | `gsed` on PATH as `sed` |
+| `objtool` / ORC | Disabled in fragment + empty `cmd_objtool` |
+| `extract-cert` / OpenSSL mix | Cert hostprog stubbed; MODULE_SIG off |
+| SELinux `mdp` | `CONFIG_SECURITY_SELINUX=n` |
+| Missing `<asm/types.h>` for tools/ | Tiny stub under `tools/include/asm/` |
+| New clang `-Werror=*` vs Linux 6.12 | `KCFLAGS=-Wno-error=…` |
+
+## What stays in the Linux builder guest
+
+Not because FreeBSD is insufficient for *orchestration*, but because these
+steps assume a Linux userspace ABI:
+
+- OpenZFS `configure` + `.ko` / libzfs against the FreeBSD-built kernel tree
+- Classic LFS chapters (glibc, toolchain passes, chroot)
+
+That guest is a **real Linux VM** (Alpine under bhyve), not linuxulator.
+See [BUILDER-GUEST.md](BUILDER-GUEST.md) and [ARCHITECTURE.md](ARCHITECTURE.md).

@@ -15,7 +15,7 @@ SRC="$1"
 BUILD="$2"
 FRAG="$3"
 CLANG="$4"
-# Optional 5th arg: HOSTCC for kbuild host tools (prefer linuxulator gcc on FreeBSD).
+# Optional 5th arg: FreeBSD-native HOSTCC (ports gcc* or clang). Never linuxulator.
 HOSTCC="${5:-$CLANG}"
 export MAKE=gmake
 export TARGET_TRIPLE="${TARGET_TRIPLE:-x86_64-linux-gnu}"

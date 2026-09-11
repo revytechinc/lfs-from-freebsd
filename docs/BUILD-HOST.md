@@ -24,10 +24,12 @@ Install once (names are FreeBSD ports/pkg):
 ```sh
 doas pkg install -y \
   xorriso mtools squashfs-tools e2fsprogs \
-  gmake bash curl git wget gsed nasm \
-  cdrtools bison flex coreutils \
-  linux_base-rl9 linux-rl9-devtools
+  gmake bash curl git wget gsed nasm gcc14 \
+  cdrtools bison flex coreutils seabios
 ```
+
+**Pure FreeBSD** — do not install `linux_base-*` / linuxulator toolchains for
+this repo. Kernel host tools use FreeBSD `gcc14` or base `clang`.
 
 Kernel kbuild needs **bison**, **flex**, **GNU install** (`ginstall` from
 `coreutils`), and **GNU sed** (`gsed`) — FreeBSD `sed` cannot run the

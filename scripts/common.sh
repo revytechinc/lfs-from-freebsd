@@ -32,7 +32,7 @@ export LF_VENDOR LF_OUT LF_LOGDIR
 # shellcheck disable=SC1091
 . "$LF_ROOT/versions.env"
 
-# Absolute path — never trust PATH (linuxulator binutils dirs must not shadow this).
+# Absolute path — never trust PATH (e.g. gsed shadowing must not affect uname).
 lf_uname="$(/usr/bin/uname -s 2>/dev/null || uname -s)"
 export lf_uname
 
