@@ -50,7 +50,7 @@ gmake kernel
 | `objtool` / ORC | Disabled in fragment; empty `cmd_objtool`; drop `prepare: tools/objtool` |
 | `extract-cert` / OpenSSL mix | Cert hostprog stubbed; MODULE_SIG off |
 | SELinux `mdp` | `CONFIG_SECURITY_SELINUX=n` |
-| Missing `<asm/types.h>` for tools/ | Tiny stub under `tools/include/asm/` |
+| Missing `<asm/types.h>` / `bitsperlong.h` for host tools | Stubs under `tools/include/asm/` + HOSTCFLAGS arch uapi `-I` |
 | New clang `-Werror=*` vs Linux 6.12 | `KCFLAGS=-Wno-error=…` |
 
 ## What stays in the Linux builder guest

@@ -111,7 +111,7 @@ else
 	lf_die "ginstall missing — pkg install coreutils"
 fi
 
-# Host-tool stubs: Linux tools/ expect <asm/types.h> during some host compiles.
+# Host-tool stubs under tools/include/asm/
 mkdir -p "$SRC/tools/include/asm"
 if [ ! -f "$SRC/tools/include/asm/types.h" ]; then
 	cat > "$SRC/tools/include/asm/types.h" <<'EOF'
@@ -119,6 +119,16 @@ if [ ! -f "$SRC/tools/include/asm/types.h" ]; then
 #ifndef _LF_TOOLS_ASM_TYPES_H
 #define _LF_TOOLS_ASM_TYPES_H
 #include <asm-generic/types.h>
+#endif
+EOF
+fi
+# vdso2c / int-ll64.h look for asm/bitsperlong.h on the host include path.
+if [ ! -f "$SRC/tools/include/asm/bitsperlong.h" ]; then
+	cat > "$SRC/tools/include/asm/bitsperlong.h" <<'EOF'
+/* FreeBSD-native stub — prefer arch uapi via HOSTCFLAGS; this is fallback */
+#ifndef _LF_TOOLS_ASM_BITSPERLONG_H
+#define _LF_TOOLS_ASM_BITSPERLONG_H
+#include <asm-generic/bitsperlong.h>
 #endif
 EOF
 fi
@@ -136,8 +146,9 @@ if [ -f "$BUILD/.config" ]; then
 	done
 fi
 
-# FreeBSD HOSTCC needs Linux tools/ uapi includes for some host programs.
-HOSTCFLAGS="${LF_HOSTCFLAGS:--I$SRC/tools/include -I$SRC/include/uapi}"
+# FreeBSD HOSTCC needs Linux uapi (incl. arch/x86 asm/) for host programs
+# such as vdso2c — system headers alone are not enough.
+HOSTCFLAGS="${LF_HOSTCFLAGS:--I$SRC/tools/include -I$SRC/arch/x86/include/uapi -I$SRC/arch/x86/include -I$SRC/include/uapi -I$SRC/include}"
 
 # FreeBSD sed lacks GNU \| — voffset.h recipes hardcode `sed`.
 if command -v gsed >/dev/null 2>&1; then
