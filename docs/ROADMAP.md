@@ -18,20 +18,20 @@ Exit criteria:
 ### Phase 0 — repo scaffold
 
 - [x] Public GitHub repo `revytechinc/lfs-from-freebsd`
-- [ ] README, LICENSE, NOTICE, LICENSES/, versions.env, Makefile
-- [ ] docs/ set (architecture, build host, boot, ZFS, builder, GPL, troubleshooting)
-- [ ] scripts/ stubs with header documentation
-- [ ] Initial commit pushed; clone on the CloudBSD build host
+- [x] README, LICENSE, NOTICE, LICENSES/, versions.env, Makefile
+- [x] docs/ set (architecture, build host, boot, ZFS, builder, GPL, troubleshooting)
+- [x] scripts/ stubs with header documentation
+- [x] Initial commit pushed; clone on the CloudBSD build host
 
 ### Phase 1 — FreeBSD-native kernel + live ISO
 
-- [ ] `make fetch` verifies all pinned tarballs
-- [ ] `make kernel` builds `out/linux/bzImage` via LLVM on FreeBSD
-- [ ] BusyBox available in initramfs (cross-build or documented static bootstrap)
-- [ ] `make initramfs` produces `out/initramfs.img`
-- [ ] `make iso` produces hybrid **BIOS + UEFI** ISO with Limine
-- [ ] `make test-boot` → shell (UEFI)
-- [ ] `make test-boot-bios` → shell (legacy BIOS)
+- [x] `make fetch` verifies all pinned tarballs
+- [x] `make kernel` builds `out/linux/bzImage` via LLVM on FreeBSD
+- [x] BusyBox available in initramfs (cross-build or documented static bootstrap)
+- [x] `make initramfs` produces `out/initramfs.img`
+- [x] `make iso` produces hybrid **BIOS + UEFI** ISO with Limine
+- [x] `make test-boot` → Limine menu under bhyve UEFI (live rescue shell after boot)
+- [ ] `make test-boot-bios` → shell (legacy BIOS; El Torito + bios-install present, SeaBIOS serial TBD)
 
 ### Phase 2 — OpenZFS root install
 
