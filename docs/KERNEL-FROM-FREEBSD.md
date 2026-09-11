@@ -1,11 +1,12 @@
-# Building the Linux kernel from FreeBSD — PURE FreeBSD
+# Building a Linux kernel on FreeBSD — PURE FreeBSD
 
 <!-- Copyright (c) 2026 REVYTECH, Inc. -->
 
 ## Policy
 
-**No linuxulator.** Host tools and orchestration run as FreeBSD natives.
-The Linux *target* is produced with FreeBSD’s LLVM (`LLVM=1`).
+**No linuxulator.** The FreeBSD host builds the Linux kernel. Host tools and
+orchestration are FreeBSD natives; FreeBSD’s LLVM emits the Linux target
+(`LLVM=1`).
 
 `LF_HOSTCC` / `LF_HOSTLD` pointing at `/compat/linux/…` is a hard error.
 

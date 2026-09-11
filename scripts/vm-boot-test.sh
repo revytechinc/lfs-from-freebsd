@@ -122,8 +122,8 @@ set -e
 cleanup
 trap - EXIT INT TERM
 
-if grep -Eqi 'limine|linux|busybox|Kernel panic|lfs-from-freebsd|LFS from|BdsDxe' "$LF_CURRENT_LOG" 2>/dev/null \
-	|| strings -a "$LF_CURRENT_LOG" 2>/dev/null | grep -Eqi 'limine|LFS from|busybox|linux version'; then
+if grep -Eqi 'limine|linux|busybox|Kernel panic|lfs-from-freebsd|Linux on FreeBSD|BdsDxe' "$LF_CURRENT_LOG" 2>/dev/null \
+	|| strings -a "$LF_CURRENT_LOG" 2>/dev/null | grep -Eqi 'limine|Linux on FreeBSD|busybox|linux version'; then
 	lf_log "Saw boot-related output in $LF_CURRENT_LOG"
 else
 	lf_log "WARN: no recognizable boot strings yet in $LF_CURRENT_LOG (firmware may need console tweaks)"

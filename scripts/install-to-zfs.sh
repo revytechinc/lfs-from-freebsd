@@ -190,7 +190,7 @@ timeout: 5
 serial: yes
 default_entry: 1
 
-/LFS from FreeBSD (ZFS)
+/Linux on FreeBSD (ZFS)
     protocol: linux
     path: boot():/boot/vmlinuz
     cmdline: $CMDLINE

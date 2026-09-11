@@ -1,11 +1,11 @@
 # lfs-from-freebsd
 
-**Linux From Scratch, built and packaged from a FreeBSD host; installed root is OpenZFS.**
+**On FreeBSD: build a Linux kernel, live ISO, and LFS-based system with an OpenZFS root.**
 
-This repository turns the usual direction inside-out: instead of “build FreeBSD
-from Linux,” we **orchestrate LFS from FreeBSD**, produce a **UEFI live ISO**
-that boots Linux in a VM, and install that system onto a **ZFS root**
-(`rpool/ROOT/lfs`).
+Usual story is “build FreeBSD while running Linux.” This repo is the other
+direction: **a FreeBSD host builds Linux** (kernel + live media), then walks
+[Linux From Scratch](https://www.linuxfromscratch.org/) into an **OpenZFS**
+installed root (`rpool/ROOT/lfs`).
 
 GPL / CDDL upstream sources are first-class here (see [NOTICE](NOTICE) and
 [docs/GPL-REDISTRIBUTION.md](docs/GPL-REDISTRIBUTION.md)). Project glue

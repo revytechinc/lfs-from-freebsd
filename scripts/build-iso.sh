@@ -71,7 +71,7 @@ done
 
 # Shared limine.conf (BIOS + UEFI)
 CMDLINE="lfs.live=1 console=tty0 console=ttyS0,115200n8"
-sed -e "s|@@TITLE@@|LFS from FreeBSD (live)|g" \
+sed -e "s|@@TITLE@@|Linux on FreeBSD (live)|g" \
 	-e "s|@@KERNEL_PATH@@|/boot/vmlinuz|g" \
 	-e "s|@@INITRD_PATH@@|/boot/initramfs.img|g" \
 	-e "s|@@CMDLINE@@|${CMDLINE}|g" \
