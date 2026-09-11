@@ -1,0 +1,19 @@
+# Alpine setup-alpine answerfile for lfs-from-freebsd builder guest
+# Used as: setup-alpine -f /mnt/lfs/alpine-answers
+# Disk is virtio-blk → typically /dev/vda under Alpine.
+
+KEYMAPOPTS="us us"
+HOSTNAMEOPTS="-n lfs-builder"
+DEVDOPTS="mdev"
+INTERFACESOPTS="auto lo
+iface lo inet loopback
+"
+TIMEZONEOPTS="-z UTC"
+PROXYOPTS="none"
+# First usable CDN mirror (-1)
+APKREPOSOPTS="-1"
+APKCACHEOPTS="none"
+SSHDOPTS="-c openssh"
+NTPOPTS="-c none"
+# Full disk sys install onto virtio disk
+DISKOPTS="-m sys /dev/vda"
