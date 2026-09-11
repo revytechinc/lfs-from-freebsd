@@ -26,7 +26,7 @@ Exit criteria:
 ### Phase 1 — FreeBSD-native kernel + live ISO
 
 - [x] `make fetch` verifies all pinned tarballs
-- [x] `make kernel` builds `out/linux/bzImage` via LLVM on FreeBSD
+- [x] `make kernel` builds `out/linux/bzImage` via LLVM on FreeBSD (pure FreeBSD HOSTCC; no linuxulator)
 - [x] BusyBox available in initramfs (cross-build or documented static bootstrap)
 - [x] `make initramfs` produces `out/initramfs.img`
 - [x] `make iso` produces hybrid **BIOS + UEFI** ISO with Limine
