@@ -7,7 +7,6 @@
 # WHAT: Extract vendor/linux-*.tar.xz, apply config fragment, build bzImage +
 #       modules with FreeBSD clang/LLVM (LLVM=1). Host tools use FreeBSD HOSTCC.
 # WHY:  Product claim — FreeBSD builds the Linux kernel. No linuxulator.
-#       HOSTCC. See docs/ARCHITECTURE.md and docs/KERNEL-FROM-FREEBSD.md.
 # HOST: FreeBSD only. Requires gmake, gsed, ginstall, bison, flex.
 # OUT:  out/linux/bzImage, System.map, modules/, headers/
 # DOCS: docs/KERNEL-FROM-FREEBSD.md

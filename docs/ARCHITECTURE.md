@@ -9,9 +9,9 @@ change** — do not leave them divergent.
 ## Why hybrid?
 
 Classic [Linux From Scratch](https://www.linuxfromscratch.org/) assumes you
-are already on a Linux host with a working toolchain. Our product claim is
-the reverse of the nested-virt work: **FreeBSD builds Linux** (kernel, ISO,
-orchestration), instead of building FreeBSD while already on Linux.
+are already on a Linux host with a working toolchain. This project is the
+other direction: **FreeBSD builds Linux** (kernel, ISO, orchestration),
+instead of building FreeBSD while already on Linux.
 
 **Pure FreeBSD on the build host** — no linuxulator, no `/compat/linux` host
 tools. FreeBSD clang/LLVM cross-builds the Linux kernel; FreeBSD packages
