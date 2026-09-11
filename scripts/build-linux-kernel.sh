@@ -43,6 +43,11 @@ tar -xJf "$LF_VENDOR/$LINUX_TARBALL" -C "$SRC" --strip-components=1
 if [ -f "$SRC/scripts/Makefile.lib" ]; then
 	sed -i.bak -e 's/^cmd_objtool = .*/cmd_objtool =/' "$SRC/scripts/Makefile.lib"
 fi
+# prepare: tools/objtool still fires when CONFIG_OBJTOOL=y (syncconfig resurrects it).
+# Drop the dependency so FreeBSD-native builds never enter tools/objtool.
+if [ -f "$SRC/Makefile" ]; then
+	sed -i.bak -e '/^prepare: tools\/objtool$/d' "$SRC/Makefile"
+fi
 if [ -f "$SRC/certs/Makefile" ]; then
 	sed -i.bak \
 		-e 's/^hostprogs := extract-cert$/hostprogs :=/' \

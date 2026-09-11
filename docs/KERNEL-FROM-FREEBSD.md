@@ -45,7 +45,7 @@ gmake kernel
 | BSD `make` | Always `gmake` |
 | FreeBSD `install` | `INSTALL=ginstall` |
 | FreeBSD `sed` / `\|` in VOFFSET | `gsed` on PATH as `sed` |
-| `objtool` / ORC | Disabled in fragment + empty `cmd_objtool` |
+| `objtool` / ORC | Disabled in fragment; empty `cmd_objtool`; drop `prepare: tools/objtool` |
 | `extract-cert` / OpenSSL mix | Cert hostprog stubbed; MODULE_SIG off |
 | SELinux `mdp` | `CONFIG_SECURITY_SELINUX=n` |
 | Missing `<asm/types.h>` for tools/ | Tiny stub under `tools/include/asm/` |
