@@ -39,23 +39,33 @@ try_linuxulator_openzfs() {
 	[ -x "$LXGCC" ] || return 1
 	command -v autoreconf >/dev/null 2>&1 || return 1
 	lf_log "Attempting OpenZFS configure/build via linuxulator gcc"
+	LF_LXLIB="$LF_OUT/linux-host-lib"
+	mkdir -p "$LF_LXLIB"
+	# Unversioned .so for -lz (Rocky/C7 often ship only libz.so.1).
+	if [ -e /compat/linux/usr/lib64/libz.so.1 ]; then
+		ln -sfn /compat/linux/usr/lib64/libz.so.1 "$LF_LXLIB/libz.so"
+	elif [ -e /compat/linux/lib64/libz.so.1 ]; then
+		ln -sfn /compat/linux/lib64/libz.so.1 "$LF_LXLIB/libz.so"
+	fi
 	(
 		cd "$LF_OUT/zfs/src" || exit 1
-		# Prefer regenerating autotools on FreeBSD host if available.
-		if [ ! -f configure ]; then
+		if [ ! -x configure ]; then
 			autoreconf -fi || exit 1
 		fi
-		# Configure under a PATH that keeps FreeBSD utils first but uses
-		# linuxulator CC for the actual compile.
 		export CC="$LXGCC"
 		export CXX="${LF_HOSTCXX:-/compat/linux/usr/bin/g++}"
-		# OpenZFS expects GNU make.
+		export PKG_CONFIG_PATH="/compat/linux/usr/lib64/pkgconfig:/compat/linux/usr/lib/pkgconfig"
+		export LDFLAGS="-L$LF_LXLIB -L/compat/linux/usr/lib64 -L/compat/linux/lib64"
+		export CPPFLAGS="-I/compat/linux/usr/include"
+		export LIBS="-L$LF_LXLIB -lz"
 		./configure \
 			--prefix=/usr \
 			--with-linux="$KERNEL_SRC" \
 			--with-linux-obj="$KERNEL_OBJ" \
 			--disable-sysvinit \
-			--disable-systemd || exit 1
+			--disable-systemd \
+			--disable-pyzfs \
+			--disable-nls || exit 1
 		gmake -j"$(lf_jobs)" || exit 1
 		gmake DESTDIR="$DEST" install || exit 1
 	)
