@@ -70,7 +70,7 @@ done
 [ -f "$TREE/EFI/BOOT/BOOTX64.EFI" ] || lf_log "WARN: BOOTX64.EFI not found — check Limine build outputs"
 
 # Shared limine.conf (BIOS + UEFI)
-CMDLINE="lfs.live=1 console=tty0 console=ttyS0,115200n8"
+CMDLINE="lfs.live=1 console=tty0 console=ttyS0,115200n8 efi=noruntime ibt=off"
 sed -e "s|@@TITLE@@|Linux on FreeBSD (live)|g" \
 	-e "s|@@KERNEL_PATH@@|/boot/vmlinuz|g" \
 	-e "s|@@INITRD_PATH@@|/boot/initramfs.img|g" \

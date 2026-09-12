@@ -66,4 +66,15 @@ gmake -C "$SRC" O="$BUILD" ARCH=x86_64 LLVM=1 LLVM_IAS=1 HOSTCC="$HOSTCC" olddef
 "$BASH" "$SC" --file "$BUILD/.config" --disable SYSTEM_REVOCATION_LIST
 "$BASH" "$SC" --file "$BUILD/.config" --disable IMA
 "$BASH" "$SC" --file "$BUILD/.config" --disable INTEGRITY
-# Do NOT re-run olddefconfig after this or OBJTOOL/MODULE_SIG come back.
+"$BASH" "$SC" --file "$BUILD/.config" --disable X86_KERNEL_IBT
+"$BASH" "$SC" --file "$BUILD/.config" --disable CALL_THUNKS
+"$BASH" "$SC" --file "$BUILD/.config" --disable MITIGATION_RETPOLINE
+"$BASH" "$SC" --file "$BUILD/.config" --disable MITIGATION_RETHUNK
+"$BASH" "$SC" --file "$BUILD/.config" --disable MITIGATION_UNRET_ENTRY
+"$BASH" "$SC" --file "$BUILD/.config" --disable MITIGATION_CALL_DEPTH_TRACKING
+"$BASH" "$SC" --file "$BUILD/.config" --disable MITIGATION_RETBLEED
+"$BASH" "$SC" --file "$BUILD/.config" --disable MITIGATION_SRSO
+"$BASH" "$SC" --file "$BUILD/.config" --disable MITIGATION_IBPB_ENTRY
+"$BASH" "$SC" --file "$BUILD/.config" --disable MITIGATION_IBRS_ENTRY
+"$BASH" "$SC" --file "$BUILD/.config" --disable JUMP_LABEL
+# Do NOT re-run olddefconfig after this or OBJTOOL/MODULE_SIG/IBT come back.

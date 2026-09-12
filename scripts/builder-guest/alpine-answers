@@ -1,19 +1,28 @@
-# Alpine setup-alpine answerfile for lfs-from-freebsd builder guest
-# Used as: setup-alpine -f /mnt/lfs/alpine-answers
-# Disk is virtio-blk → typically /dev/vda under Alpine.
+# Alpine setup-alpine answerfile — HISTORICAL only (builder guest is fail-closed).
+# Do not revive with setup-alpine -e (empty root password). Prefer key-only SSH
+# (PermitRootLogin prohibit-password, PasswordAuthentication no) if this path
+# is ever re-enabled. Disk is virtio-blk → typically /dev/vda under Alpine.
+#
+# Networking: private host bridge lfsbr0 (10.77.77.1/24); guest static .2
 
 KEYMAPOPTS="us us"
 HOSTNAMEOPTS="-n lfs-builder"
 DEVDOPTS="mdev"
 INTERFACESOPTS="auto lo
 iface lo inet loopback
+
+auto eth0
+iface eth0 inet static
+	address 10.77.77.2
+	netmask 255.255.255.0
+	gateway 10.77.77.1
 "
+DNSOPTS="-d local -n 1.1.1.1"
 TIMEZONEOPTS="-z UTC"
 PROXYOPTS="none"
-# First usable CDN mirror (-1)
 APKREPOSOPTS="-1"
 APKCACHEOPTS="none"
 SSHDOPTS="-c openssh"
 NTPOPTS="-c none"
-# Full disk sys install onto virtio disk
+USEROPTS="none"
 DISKOPTS="-m sys /dev/vda"

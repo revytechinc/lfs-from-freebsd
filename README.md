@@ -83,6 +83,7 @@ Read these before changing behaviour:
 | [docs/BUILDER-GUEST.md](docs/BUILDER-GUEST.md) | Linux guest used for LFS chapters |
 | [docs/GPL-REDISTRIBUTION.md](docs/GPL-REDISTRIBUTION.md) | What you owe if you ship an ISO |
 | [docs/DESKTOP-PLASMA6.md](docs/DESKTOP-PLASMA6.md) | Installed-only KDE Plasma 6 + SDDM (BLFS track) |
+| [docs/MULTI-ARCH.md](docs/MULTI-ARCH.md) | **amd64 first**, then aarch64 (Apple Silicon) |
 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Common FreeBSD→Linux build failures |
 | [versions.env](versions.env) | Pinned versions + SHA256 (source of truth) |
 

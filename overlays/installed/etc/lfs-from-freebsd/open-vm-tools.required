@@ -1,0 +1,7 @@
+# Copyright (c) 2026 REVYTECH, Inc.
+# Ensure Open VM Tools is expected on installed VMware guests.
+# Actual binaries come from chapters/1450-open-vm-tools.sh; this file
+# documents the contract for install-to-zfs / smoke tests.
+
+# Required process after multi-user / graphical target under VMware:
+#   vmtoolsd

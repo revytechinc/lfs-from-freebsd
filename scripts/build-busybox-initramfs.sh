@@ -58,20 +58,41 @@ chmod +x "$IR/bin/busybox"
 # symlink set for the initramfs (extend as needed).
 for applet in sh ash mount umount mkdir ls cat echo sleep modprobe switch_root \
 	cpio gzip gunzip find grep sed awk ln cp mv rm chmod chown mknod \
-	uname dmesg blkid zpool zfs; do
+	uname dmesg blkid insmod; do
 	ln -sf busybox "$IR/bin/$applet"
 done
 # sbin copies of common admin names
 mkdir -p "$IR/sbin"
-for applet in modprobe switch_root mount umount zpool zfs; do
+for applet in modprobe switch_root mount umount insmod; do
 	ln -sf ../bin/busybox "$IR/sbin/$applet"
 done
+
+# OpenZFS product runtime (staged by Alpine builder → out/zfs/runtime).
+RT="$LF_OUT/zfs/runtime"
+if [ -f "$LF_OUT/zfs/STATUS" ] && [ "$(cat "$LF_OUT/zfs/STATUS")" = "linux-guest-ok" ] \
+	&& [ -d "$RT/modules" ] && [ -x "$RT/sbin/zfs" ]; then
+	lf_log "Embedding OpenZFS runtime from $RT"
+	mkdir -p "$IR/lib/modules/lfs" "$IR/usr/lib"
+	cp -f "$RT/modules/"*.ko "$IR/lib/modules/lfs/"
+	cp -f "$RT/sbin/zfs" "$RT/sbin/zpool" "$IR/sbin/" 2>/dev/null || true
+	[ -x "$RT/sbin/zgenhostid" ] && cp -f "$RT/sbin/zgenhostid" "$IR/sbin/"
+	# Musl loader + OpenZFS shared libs (Alpine-built).
+	cp -a "$RT/lib/"* "$IR/lib/" 2>/dev/null || true
+	cp -a "$RT/usr/lib/"* "$IR/usr/lib/" 2>/dev/null || true
+else
+	lf_log "WARN: no out/zfs/runtime yet — initramfs zpool/zfs are BusyBox stubs"
+	ln -sf busybox "$IR/bin/zpool"
+	ln -sf busybox "$IR/bin/zfs"
+	ln -sf ../bin/busybox "$IR/sbin/zpool"
+	ln -sf ../bin/busybox "$IR/sbin/zfs"
+fi
 
 # /init — live vs ZFS installed (firmware-agnostic: BIOS and UEFI both reach here)
 cat > "$IR/init" <<'INIT'
 #!/bin/busybox sh
 # lfs-from-freebsd initramfs — see docs/BOOT-AND-ISO.md
 export PATH=/bin:/sbin
+export LD_LIBRARY_PATH=/usr/lib:/lib
 
 mount -t proc proc /proc
 mount -t sysfs sysfs /sys
@@ -102,7 +123,12 @@ if [ -n "$rootzfs" ] && [ "$live" -eq 0 ]; then
 		exec /bin/busybox sh
 		;;
 	esac
-	modprobe zfs 2>/dev/null || true
+	if [ -f /lib/modules/lfs/spl.ko ]; then
+		insmod /lib/modules/lfs/spl.ko 2>/dev/null || true
+		insmod /lib/modules/lfs/zfs.ko 2>/dev/null || true
+	else
+		modprobe zfs 2>/dev/null || true
+	fi
 	zpool import -N rpool 2>/dev/null || true
 	if mount -t zfs "$rootzfs" /newroot 2>/dev/null; then
 		echo "Mounted $rootzfs on /newroot; switch_root"
@@ -122,6 +148,13 @@ if [ "$live" -eq 1 ]; then
 		if [ -f /mnt/medium/live/rootfs.squashfs ]; then
 			if mount -t squashfs -o ro /mnt/medium/live/rootfs.squashfs /mnt/squash 2>/dev/null; then
 				if [ -x /mnt/squash/sbin/init ] || [ -x /mnt/squash/init ]; then
+					# Keep the ISO visible after switch_root (installer needs
+					# /boot/vmlinuz). Prefer /media/cdrom — not under /mnt,
+					# which install-to-zfs reuses as ZFS altroot.
+					mkdir -p /mnt/squash/media/cdrom
+					if ! mount --move /mnt/medium /mnt/squash/media/cdrom 2>/dev/null; then
+						mount -o bind /mnt/medium /mnt/squash/media/cdrom 2>/dev/null || true
+					fi
 					exec switch_root /mnt/squash /sbin/init
 				fi
 			fi

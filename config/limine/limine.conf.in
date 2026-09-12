@@ -11,8 +11,8 @@ timeout: 5
 serial: yes
 default_entry: 1
 
-/@@TITLE@@/
+/@@TITLE@@
     protocol: linux
-    path: boot():@@KERNEL_PATH@@
+    kernel_path: boot():@@KERNEL_PATH@@
     cmdline: @@CMDLINE@@
     module_path: boot():@@INITRD_PATH@@
