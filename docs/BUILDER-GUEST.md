@@ -1,62 +1,45 @@
-# Linux builder guest
+# Linux builder guest — NON-NORMATIVE (historical)
 
 <!-- Copyright (c) 2026 REVYTECH, Inc. -->
 
-## Purpose
+> **Status:** Guide / experiment only. **Not** part of the product build
+> contract. See [ARCHITECTURE.md](ARCHITECTURE.md).
+>
+> Do **not** run new Milestone B/C chapters through Alpine. Do **not** treat
+> a green `lfs-builder` chapter as proof of the FreeBSD-builds-Linux claim.
+> Retain this tree only as reference for dependency order and pins.
 
-Some steps (OpenZFS Linux module link, glibc, multi-pass GCC, chroot) need a
-**real Linux userspace**. FreeBSD remains the orchestrator and still owns:
+## What this was
 
-- version pins (`versions.env`)
-- Linux kernel build (pure FreeBSD HOSTCC + LLVM — no linuxulator)
-- ISO packaging
-- ZFS install story / bhyve tests
+An Alpine Linux bhyve VM used to cross-build glibc LFS/BLFS packages into a
+DESTDIR shared over virtio-9p. It avoided FreeBSD-hosted Linux sysroot work
+by compiling on a real Linux ABI.
 
-The builder is an **Alpine Linux VM under bhyve**, not an ABI emulator.
+That contradicts the product rule: **compile on FreeBSD; Linux only as the
+payload and as a test guest.**
 
-## Distro choice (v1)
+## Superseded by
 
-Default: **Alpine Linux** virt ISO (musl *builder* host; LFS DESTDIR still
-targets **glibc** userspace). Pinned as `BUILDER_ALPINE_*` in `versions.env`.
+| Concern | Normative path |
+|---------|----------------|
+| Toolchain + libc/sysroot | FreeBSD-hosted cross → `out/toolchain`, `out/sysroot` ([FREEBSD-CROSS-USERSPACE.md](FREEBSD-CROSS-USERSPACE.md)) |
+| LFS/BLFS chapters | Run on FreeBSD against that sysroot |
+| Kernel | Unchanged — FreeBSD LLVM ([KERNEL-FROM-FREEBSD.md](KERNEL-FROM-FREEBSD.md)) |
+| ISO / bhyve tests | Unchanged — FreeBSD packs; Linux boots the ISO |
 
-## Lifecycle
+## Scripts (frozen)
 
-| Script | Role |
-|--------|------|
-| `create.sh` | Stage Alpine ISO + empty disk + `state.env` |
-| `start.sh` | bhyve UEFI boot; virtio-9p share of `out/` + `vendor/` |
-| `stop.sh` | destroy VM |
-| `alpine-answers` | `setup-alpine -f` answerfile (sys install to `/dev/vda`) |
-| `guest-build-openzfs.sh` | Run **in the guest** after 9p mount |
+`scripts/builder-guest/*` are fail-closed stubs (`exit 1`). `make builder` /
+`make chapters` refuse the same way. Historical Alpine lifecycle stays in this
+doc only; do not grow those scripts.
 
-### First boot (operator)
+## Lifecycle (historical reference)
 
-```sh
-doas ./scripts/builder-guest/create.sh   # once
-doas ./scripts/builder-guest/start.sh    # serial console
+| Script | Former role |
+|--------|-------------|
+| `create.sh` / `start.sh` / `stop.sh` | Alpine disk VM under bhyve |
+| `run-chapter.sh` | scp + ssh chapter into guest |
+| `guest-build-openzfs.sh` | OpenZFS inside Alpine |
 
-# In Alpine live (root, empty password):
-mkdir -p /mnt/lfs
-mount -t 9p -o trans=virtio lfs /mnt/lfs
-setup-alpine -f /mnt/lfs/alpine-answers
-reboot
-# Remove ISO from start.sh args or eject CD after install, reboot from disk
-```
-
-### OpenZFS (in guest, after disk install + 9p remount)
-
-```sh
-mount -t 9p -o trans=virtio lfs /mnt/lfs
-sh /mnt/lfs/guest-build-openzfs.sh
-# Results: out/zfs/destdir + out/zfs/modules on the FreeBSD host share
-```
-
-## Shared data
-
-Default v1: **virtio-9p** share named `lfs` → guest `/mnt/lfs` with
-`out/` and `vendor/` symlinks. No linuxulator; FreeBSD only serves files.
-
-## State file
-
-`out/builder/state.env` (not committed) — VM name, disk paths, optional
-`BUILDER_SSH` once networking is added.
+Shared data was virtio-9p tag `lfs` → `/mnt/lfs`. State: `out/builder/state.env`
+(not committed).

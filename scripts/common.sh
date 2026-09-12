@@ -169,6 +169,26 @@ lf_start_log() {
 	fi
 }
 
+# lf_path_under PATH PREFIX — resolve both; PATH must equal PREFIX or PREFIX/*
+lf_path_under() {
+	_path="$(realpath -q "$1" 2>/dev/null || true)"
+	_pfx="$(realpath -q "$2" 2>/dev/null || true)"
+	[ -n "$_path" ] && [ -n "$_pfx" ] || lf_die "cannot resolve '$1' under '$2'"
+	case "$_path" in
+	"$_pfx"|"$_pfx"/*) ;;
+	*) lf_die "path $_path is not under $_pfx" ;;
+	esac
+}
+
+# lf_musl_ld_name — musl dynamic linker basename for TARGET_ARCH
+lf_musl_ld_name() {
+	case "${TARGET_ARCH:-x86_64}" in
+	x86_64|amd64) echo "ld-musl-x86_64.so.1" ;;
+	aarch64|arm64) echo "ld-musl-aarch64.so.1" ;;
+	*) lf_die "unsupported TARGET_ARCH=${TARGET_ARCH:-} for musl dynamic linker (supported: x86_64, aarch64)" ;;
+	esac
+}
+
 # lf_allow_abs_path PATH — absolute, no .., no empty segments, safe charset
 lf_allow_abs_path() {
 	_p="$1"

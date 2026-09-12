@@ -2,10 +2,8 @@
 # Copyright (c) 2026 REVYTECH, Inc.
 # SPDX-License-Identifier: BSD-3-Clause
 #
-# builder-guest/stop.sh
+# Alpine builder guest — disabled (docs/ARCHITECTURE.md).
 set -eu
-. "$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)/common.sh"
-lf_need_freebsd
-NAME="${1:-lfs-builder}"
-bhyvectl --vm="$NAME" --destroy 2>/dev/null || true
-lf_log "destroyed $NAME"
+echo "ERROR: Alpine builder guest is disabled. Run 'gmake sysroot' then 'gmake chapter CHAPTER=chapters/<id>.sh' (see docs/ARCHITECTURE.md)" >&2
+exit 1
+

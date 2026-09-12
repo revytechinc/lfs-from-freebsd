@@ -53,13 +53,12 @@ gmake kernel
 | Missing `<asm/types.h>` / `bitsperlong.h` for host tools | Stubs under `tools/include/asm/` + HOSTCFLAGS arch uapi `-I` |
 | New clang `-Werror=*` vs Linux 6.12 | `KCFLAGS=-Wno-error=…` |
 
-## What stays in the Linux builder guest
+## What does *not* belong in a Linux builder guest
 
-Not because FreeBSD is insufficient for *orchestration*, but because these
-steps assume a Linux userspace ABI:
+**Normative path:** build OpenZFS Linux modules and LFS/BLFS userspace on
+**FreeBSD** against a FreeBSD-built kernel tree and FreeBSD-hosted Linux
+sysroot. See [ARCHITECTURE.md](ARCHITECTURE.md) and
+[FREEBSD-CROSS-USERSPACE.md](FREEBSD-CROSS-USERSPACE.md).
 
-- OpenZFS `configure` + `.ko` / libzfs against the FreeBSD-built kernel tree
-- Classic LFS chapters (glibc, toolchain passes, chroot)
-
-That guest is a **real Linux VM** (Alpine under bhyve), not linuxulator.
-See [BUILDER-GUEST.md](BUILDER-GUEST.md) and [ARCHITECTURE.md](ARCHITECTURE.md).
+An Alpine bhyve guest was an early experiment only ([BUILDER-GUEST.md](BUILDER-GUEST.md),
+non-normative). Do not point new work at it.

@@ -6,44 +6,68 @@ This document is the design contract. Scripts implement it; if a script
 disagrees with this file, **fix the script or update this file in the same
 change** — do not leave them divergent.
 
-## Why hybrid?
+## Product claim (normative)
+
+**FreeBSD is the only build host.** FreeBSD compiles the Linux payload and
+packages hybrid ISOs / disk images. Those images **install and run a Linux
+OS** (bhyve, VMware, …).
+
+Hard refusals for the *build* path:
+
+- No **Linux VM** as a compile helper (including Alpine `lfs-builder`)
+- No **Linux jail** / Linux ABI jail as a compile helper
+- No **linuxulator** / `/compat/linux` as `HOSTCC` / `HOSTLD` / toolchain
+- No nested Linux VM **inside** a FreeBSD jail used for builds
+
+**Allowed isolation:** a **native FreeBSD jail** (same FreeBSD userland, no
+linuxulator) may wrap risky build steps — DESTDIR experiments, unpack/build
+of untrusted tarballs, chapter batches that might trash the host tree. The
+jail still cross-compiles Linux with FreeBSD clang/`ld.lld` + `out/sysroot`;
+it is not a Linux guest.
+
+Linux under bhyve or VMware is allowed only as a **test target** (boot the
+artifact), never as a builder.
+
+Historical Alpine builder notes: [BUILDER-GUEST.md](BUILDER-GUEST.md)
+(**non-normative**). Do not extend that path.
+
+## Why this shape?
 
 Classic [Linux From Scratch](https://www.linuxfromscratch.org/) assumes you
-are already on a Linux host with a working toolchain. This project is the
-other direction: **FreeBSD builds Linux** (kernel, ISO, orchestration),
-instead of building FreeBSD while already on Linux.
-
-**Pure FreeBSD on the build host** — no linuxulator, no `/compat/linux` host
-tools. FreeBSD clang/LLVM cross-builds the Linux kernel; FreeBSD packages
-assemble the hybrid ISO and run bhyve tests.
-
-A pure FreeBSD→Linux build of *everything* (especially glibc and the LFS
-temporary toolchain, and OpenZFS’s Linux module link) still needs a **real
-Linux builder VM** for those chapters — not an ABI emulator:
+already run Linux. This project is the other direction: **FreeBSD builds
+Linux** end-to-end for packaging, instead of “orchestrate a Linux guest to
+do the real work.”
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                     FreeBSD build host                          │
-│  (the CloudBSD build host / CloudBSD)                            │
+│  (CloudBSD fleet / developer FreeBSD)                            │
 │                                                                 │
-│  • fetch + verify sources                                       │
+│  • fetch + verify sources (versions.env)                        │
+│  • FreeBSD-hosted *-linux-gnu cross toolchain + sysroot         │
+│  • cross-build Linux userspace into DESTDIR / out/rootfs        │
 │  • cross-build Linux kernel (LLVM, FreeBSD HOSTCC)              │
-│  • assemble BusyBox initramfs / live root                       │
-│  • build Limine hybrid UEFI ISO                                 │
-│  • orchestrate bhyve smoke tests                                │
-│  • create/start Linux builder guest                             │
-│  • publish out/*.iso artifacts                                  │
-└────────────────────────────┬────────────────────────────────────┘
-                             │ ssh / virtio / shared out+vendor
-                             ▼
-┌─────────────────────────────────────────────────────────────────┐
-│              Linux builder guest (bhyve)                        │
-│                                                                 │
-│  • LFS chapter scripts (glibc, binutils, gcc passes, …)         │
-│  • OpenZFS configure/build when Linux-only                      │
-│  • writes into DESTDIR → synced back to FreeBSD out/rootfs      │
+│  • OpenZFS Linux modules against FreeBSD-built kernel tree      │
+│  • assemble BusyBox initramfs / live root / Limine hybrid ISO   │
+│  • publish out/*.iso                                            │
+│  • orchestrate bhyve / VMware smoke tests (Linux = DUT only)    │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+### Cross toolchain + sysroot (userspace)
+
+Userspace is **cross-compiled on FreeBSD** into a Linux DESTDIR:
+
+1. Build or refresh `out/toolchain/` (clang/`ld.lld` targeting
+   `TARGET_TRIPLE`, plus any binutils the spike requires).
+2. Populate `out/sysroot/` (Linux headers + libc — musl and/or glibc as the
+   milestone requires) **on FreeBSD**, as files — not by booting Linux.
+3. Chapter scripts run **on FreeBSD** with
+   `CC=$TRIPLE-clang` / `--sysroot=$LF_OUT/sysroot` (exact driver TBD by
+   the FreeBSD-cross spike) and install into `out/destdir` / `out/rootfs`.
+
+Empty SHA256 in `versions.env` still means **do not fetch/build** that
+package.
 
 ## Boot modes (required)
 
@@ -96,32 +120,32 @@ is running. See [ZFS-ROOT.md](ZFS-ROOT.md).
 versions.env ──► vendor/ (tarballs)
                       │
                       ▼
-              out/linux/  (bzImage, modules, headers)
+         out/toolchain + out/sysroot   (FreeBSD-built)
                       │
          ┌────────────┼────────────┐
          ▼            ▼            ▼
-   out/initramfs  out/rootfs   out/zfs/ (modules+utils)
+   out/linux/   out/destdir/   out/zfs/
+   (bzImage)    (cross pkgs)   (modules)
          │            │            │
          └────────────┼────────────┘
                       ▼
               out/lfs-from-freebsd.iso
                       │
                       ▼
-              bhyve install → rpool/ROOT/lfs
+         bhyve / VMware  (test only) → rpool/ROOT/lfs
                       │
                       ▼
-         (after Milestone C chapters)
-         SDDM greeter → KDE Plasma 6 session
+         (Milestone C) SDDM → Plasma 6 on installed image
 ```
 
 Desktop stack details: [DESKTOP-PLASMA6.md](DESKTOP-PLASMA6.md).
+Cross-userspace spike notes: [FREEBSD-CROSS-USERSPACE.md](FREEBSD-CROSS-USERSPACE.md).
 
 ## Version pinning
 
 All upstream versions and SHA256 digests live in [`versions.env`](../versions.env).
 `scripts/fetch-sources.sh` refuses to proceed on checksum mismatch. Empty
-SHA256 for an optional bootstrap URL means “download and record” — prefer
-filling it before CI.
+SHA256 for an optional package means **do not fetch or build** until pinned.
 
 ## Licensing boundary
 
@@ -130,10 +154,17 @@ filling it before CI.
 
 Operators who redistribute ISOs must read [GPL-REDISTRIBUTION.md](GPL-REDISTRIBUTION.md).
 
-## Non-goals (v1)
+## Non-goals (v1 amd64)
 
-- Multi-arch (arm64, etc.)
 - GRUB-on-ZFS / bootfs on ZFS with full feature set
-- Replacing the LFS book — we **automate** it, we do not redefine package sets
+- Replacing the LFS book — we **automate** package sets, we do not redefine them lightly
 - Shipping a general-purpose Linux distro with a package manager
 - Plasma on the **live** ISO (desktop is **installed-only**; Milestone C)
+- Using a Linux VM or linuxulator to “make LFS easier”
+- Using a FreeBSD jail *as cover* for linuxulator or a nested Linux VM
+
+## Multi-arch (after amd64)
+
+**amd64 first.** aarch64 (Apple Silicon / FreeBSD arm64 hosts) is Milestone D —
+see [MULTI-ARCH.md](MULTI-ARCH.md). Do not start aarch64 ISO work until
+amd64 reaches the desktop acceptance gate on bhyve **and** VMware.

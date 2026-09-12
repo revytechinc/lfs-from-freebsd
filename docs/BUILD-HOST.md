@@ -7,7 +7,7 @@
 | Field | Value |
 |-------|--------|
 | OS | FreeBSD / CloudBSD CURRENT (amd64) |
-| Role | Fetch, kernel cross-build, ISO, bhyve tests, builder guest |
+| Role | Fetch, FreeBSD-hosted cross builds, ISO, bhyve/VMware tests (Linux = DUT) |
 | Home clone | `~/git/lfs-from-freebsd` |
 | Disk | Large `zroot` — keep `vendor/` and `out/` on a dataset with room |
 
@@ -29,7 +29,9 @@ doas pkg install -y \
 ```
 
 **Pure FreeBSD** — do not install `linux_base-*` / linuxulator toolchains for
-this repo. Kernel host tools use FreeBSD `gcc14` or base `clang`.
+this repo. Kernel host tools use FreeBSD `gcc14` or base `clang`. Optional:
+a **native FreeBSD jail** (no linuxulator) to isolate risky chapter builds —
+see [ARCHITECTURE.md](ARCHITECTURE.md).
 
 Kernel kbuild needs **bison**, **flex**, **GNU install** (`ginstall` from
 `coreutils`), and **GNU sed** (`gsed`) — FreeBSD `sed` cannot run the

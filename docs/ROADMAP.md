@@ -45,13 +45,17 @@ Exit criteria:
 Exit criteria: installed system runs LFS-built core userspace (glibc, bash,
 coreutils, …) with the FreeBSD-built kernel and OpenZFS root.
 
-### Phase 3 — builder guest + chapters
+### Phase 3 — FreeBSD-hosted cross userspace + chapters
 
-- [ ] `make builder` creates Alpine (or pinned) Linux guest under bhyve
-- [ ] Shared `vendor/` + `out/` visible to guest
-- [ ] Chapter runner executes `chapters/*.sh` in order
+- [x] FreeBSD `out/toolchain` + `out/sysroot` spike green
+  ([FREEBSD-CROSS-USERSPACE.md](FREEBSD-CROSS-USERSPACE.md))
+- [x] Chapter runner on FreeBSD (`gmake chapter` / `run-chapter-freebsd.sh`) —
+  `0000-host-prep` + `0500-zlib-libpng` green into `out/lfs` (musl ELF);
+  further chapters TBD
 - [ ] DESTDIR snapshots on FreeBSD ZFS between chapter batches
 - [ ] Re-`make iso` / install test after userspace-changing batches
+- [ ] Alpine `make builder` / `make chapters` treated as **non-normative** only
+  ([BUILDER-GUEST.md](BUILDER-GUEST.md))
 
 ### LFS 12.3 chapter map (automation)
 
@@ -107,8 +111,26 @@ Full design: [DESKTOP-PLASMA6.md](DESKTOP-PLASMA6.md).
 | 1200 | `1200-kde-frameworks6.sh` | pending |
 | 1300 | `1300-plasma6.sh` | pending |
 | 1400 | `1400-sddm.sh` | pending |
+| 1450 | `1450-open-vm-tools.sh` | pending (VMware) |
 | 1500 | `1500-desktop-overlay.sh` | pending |
 | 1600 | `1600-desktop-smoke.sh` | pending |
+
+Acceptance hypervisors for Milestone C: **bhyve** and **VMware** (see
+[DESKTOP-PLASMA6.md](DESKTOP-PLASMA6.md)).
+
+## Milestone D — aarch64 (after amd64 Milestone C)
+
+**Do not start until amd64 SDDM + Plasma 6 is proven on bhyve and VMware.**
+
+Design: [MULTI-ARCH.md](MULTI-ARCH.md). Audience: Apple Silicon Macs
+(VMware Fusion arm64 / UTM) and FreeBSD aarch64 build hosts.
+
+- [ ] `LF_ARCH=aarch64` plumbing (`common.sh`, ISO naming, `Image.gz`)
+- [ ] `config/kernel/lfs-from-freebsd-aarch64.config`
+- [ ] Limine UEFI-AA64 hybrid-capable ISO (UEFI-only OK)
+- [ ] FreeBSD-hosted aarch64 sysroot + OpenZFS aarch64 modules
+- [ ] open-vm-tools on Fusion arm64
+- [ ] `make test-desktop LF_ARCH=aarch64` → SDDM + Plasma 6 login
 
 ## Definition of done (any phase)
 

@@ -32,18 +32,22 @@ This project follows that split:
 3. **Milestone C (desktop)** — BLFS-style stack ending in Plasma 6 + SDDM
    on the **installed** image only.
 
-## Build strategy (hybrid, same as LFS chapters)
+## Build strategy (FreeBSD cross — same as LFS chapters)
 
 Plasma 6’s dependency graph (Qt6, KDE Frameworks 6, Plasma Workspace, SDDM,
-Wayland, etc.) is built inside the **Linux builder guest**, installing into
-the same `DESTDIR` / LFS root that becomes `out/rootfs` for install.
+Wayland, etc.) is **cross-built on FreeBSD** into the same DESTDIR / LFS root
+that becomes `out/rootfs` for install — using the FreeBSD-hosted Linux
+sysroot ([FREEBSD-CROSS-USERSPACE.md](FREEBSD-CROSS-USERSPACE.md)).
+
+Do **not** build desktop packages inside a Linux builder VM.
 
 FreeBSD still owns:
 
-- kernel + OpenZFS modules
+- kernel + OpenZFS modules (FreeBSD-hosted)
 - ISO packaging
 - `install-to-zfs.sh` (copies rootfs that *includes* desktop once Phase C
   chapters have completed)
+- bhyve / VMware tests (Linux is the DUT only)
 
 ## Session defaults (installed)
 
@@ -68,17 +72,19 @@ Exact init system (systemd vs sysvinit) is decided by the LFS bootscripts
 chapter; SDDM unit/service files must match. Document the choice in
 [ROADMAP.md](ROADMAP.md) when `0300-bootscripts-or-systemd.sh` lands.
 
-## VM / virtio notes
+## VM notes — bhyve **and** VMware
 
-On bhyve and VMware, prefer:
+Acceptance is proven on **both** hypervisors (same installed image):
 
-- `virtio-gpu` or VMware SVGA with 3D if available
-- Enough RAM (≥ 4 GiB guest) for Plasma 6
-- EFI boot (already required)
+| Hypervisor | Guest stack | GPU / display | Tools |
+|------------|-------------|---------------|-------|
+| **bhyve** (CloudBSD fleet) | virtio-blk/net/balloon/scsi | `virtio-gpu` + DRM | kernel virtio only (no qemu-ga required) |
+| **VMware** Workstation/Fusion | vmxnet3, pvscsi, balloon, vmci | `vmwgfx` (SVGA) | **open-vm-tools** (`vmtoolsd`) via chapter `1450` |
 
-Kernel config must enable DRM, virtio-gpu, input (evdev), and framebuffer
-helpers used by Wayland compositors — see `config/kernel/lfs-from-freebsd.config`
-sections tagged `DESKTOP`.
+Kernel fragment enables both virtio **and** VMware drivers — see
+`config/kernel/lfs-from-freebsd.config` (`VIRT` + VMware block + `DESKTOP`).
+
+RAM ≥ 4 GiB guest for Plasma 6; EFI boot (already required).
 
 ## Chapter map (desktop)
 
@@ -89,20 +95,23 @@ sections tagged `DESKTOP`.
 | 1200 | `1200-kde-frameworks6.sh` | KF6 |
 | 1300 | `1300-plasma6.sh` | Plasma Workspace 6 + KWin |
 | 1400 | `1400-sddm.sh` | SDDM + Breeze integration |
+| 1450 | `1450-open-vm-tools.sh` | Open VM Tools for VMware guests |
 | 1500 | `1500-desktop-overlay.sh` | Merge `overlays/installed` desktop bits |
-| 1600 | `1600-desktop-smoke.sh` | Builder-side smoke (sddm-greeter --test, etc.) |
+| 1600 | `1600-desktop-smoke.sh` | Smoke: SDDM + Plasma (+ vmtoolsd under VMware) |
 
-Versions for Qt/Plasma/SDDM are pinned in `versions.env` under the `DESKTOP_*`
-and `PLASMA_*` / `QT6_*` / `SDDM_*` variables when those chapters are fleshed
-out. Until pins exist, chapter scripts must refuse to run rather than
-float to “latest”.
+Versions for Qt/Plasma/SDDM/open-vm-tools are pinned in `versions.env` under
+`DESKTOP_*` / `PLASMA_*` / `QT6_*` / `SDDM_*` / `OPEN_VM_TOOLS_*` when those
+chapters are fleshed out. Until pins have SHAs, chapter scripts must refuse
+to run rather than float to “latest”.
 
 ## Verification (installed image)
 
 1. Install from ISO to ZFS.
-2. Cold boot → SDDM greeter on the virtio/GPU console.
-3. Log in → Plasma 6 shell (panel + wallpaper).
-4. Log evidence under `out/logs/desktop-smoke-*.log`.
+2. Cold boot → **SDDM** greeter.
+3. Log in → **Plasma 6** session (panel + wallpaper).
+4. On **VMware**: `pgrep vmtoolsd` (open-vm-tools running).
+5. On **bhyve**: virtio devices present; graphical session on virtio-gpu.
+6. Log evidence under `out/logs/desktop-smoke-*.log`.
 
 ## Non-goals (v1 desktop)
 
